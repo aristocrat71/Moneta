@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -35,5 +36,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/aristocrat71/Moneta/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQyQkY1MjAyMDY5RjhGRApSV1Q5K0drZ0lQVXJCRXVKQXk4ZTE2UExyVkNEZ2NiQ0VmVW9LbTJFZldSR2NWQXJrWHFtZ1B4OQo="
+    }
   }
 }

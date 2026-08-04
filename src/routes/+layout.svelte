@@ -7,6 +7,7 @@
   import { library } from '$lib/store/library.svelte';
   import { session } from '$lib/store/session.svelte';
   import { ui } from '$lib/store/ui.svelte';
+  import { checkForUpdate } from '$lib/update';
   import Toasts from '$lib/ui/Toasts.svelte';
   import SettingsSheet from '$lib/ui/SettingsSheet.svelte';
 
@@ -18,6 +19,8 @@
     await settings.load();
     ready = true;
     void library.init();
+    // Behind the library scan — a network round trip should never delay paint.
+    setTimeout(() => void checkForUpdate(), 3000);
   });
 
   $effect(() => {

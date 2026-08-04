@@ -16,9 +16,10 @@ import { PageRenderer, applyStrokeStyle, cachedStrokeBounds } from './renderer';
 import { strokeOutline, outlineToPath } from './stroke';
 import {
   inflateRect,
+  maskStrokeUnderCircle,
   polygonBounds,
   rectUnion,
-  strokeHitsCircle,
+  splitPointsByMask,
   strokeInPolygon,
 } from './hittest';
 import { DEFAULT_TUNING } from './types';
@@ -30,6 +31,7 @@ import type {
   PageWindow,
   Rect,
   StrokeData,
+  StrokeEdit,
   StrokeStyle,
   TemplateKind,
   ThemePaint,
@@ -39,8 +41,8 @@ import type {
 export interface EngineCallbacks {
   /** Must synchronously add the stroke to the document (undoably). */
   onCommitStroke(pageId: string, stroke: StrokeData): void;
-  /** Must synchronously remove the strokes from the document (undoably). */
-  onEraseStrokes(pageId: string, ids: string[]): void;
+  /** Must synchronously apply the split edits to the document (undoably). */
+  onEraseCommit(pageId: string, edits: StrokeEdit[]): void;
   onLassoSelect(pageId: string, ids: string[]): void;
   onStrokeStart?(): void;
   onStrokeEnd?(): void;
@@ -71,7 +73,8 @@ interface ActiveGesture {
   rectDirty: boolean;
   n: number;
   np: number;
-  erased: string[];
+  /** Partial-erase masks: stroke id → per-point erased flags. */
+  masks: Map<string, Uint8Array>;
   lasso: number[];
   lastX: number;
   lastY: number;
@@ -102,6 +105,8 @@ export class InkEngine {
   private tuning: InkTuning = { ...DEFAULT_TUNING };
   private pages = new Map<string, InternalPage>();
   private hiddenByPage = new Map<string, Set<string>>();
+  /** Live-erase preview: original stroke id → its surviving segments. */
+  private replaceByPage = new Map<string, Map<string, StrokeData[]>>();
   private wetCanvas: HTMLCanvasElement | null = null;
   private wetCtx: CanvasRenderingContext2D | null = null;
   private wetRect: DOMRect | null = null;
@@ -213,10 +218,24 @@ export class InkEngine {
     const { rect, scale } = page.reg.getWindow();
     const resized = page.renderer.setWindow(rect, scale);
     this.positionCanvas(page);
-    page.renderer.render(page.reg.getStrokes(), this.paint, {
+    page.renderer.render(this.effectiveStrokes(page), this.paint, {
       hidden: this.hiddenByPage.get(id),
       dirty: resized ? undefined : dirty,
     });
+  }
+
+  /** Doc strokes with any live-erase preview substitutions applied. */
+  private effectiveStrokes(page: InternalPage): StrokeData[] {
+    const strokes = page.reg.getStrokes();
+    const repl = this.replaceByPage.get(page.reg.id);
+    if (!repl || repl.size === 0) return strokes;
+    const out: StrokeData[] = [];
+    for (const s of strokes) {
+      const segments = repl.get(s.id);
+      if (segments) out.push(...segments);
+      else out.push(s);
+    }
+    return out;
   }
 
   repaintAll(): void {
@@ -320,7 +339,7 @@ export class InkEngine {
       rectDirty: false,
       n: 0,
       np: 0,
-      erased: [],
+      masks: new Map(),
       lasso: [],
       lastX: 0,
       lastY: 0,
@@ -392,11 +411,18 @@ export class InkEngine {
       this.callbacks.onCommitStroke(active.pageId, stroke);
       this.bakeStroke(active.pageId, stroke);
     } else if (!cancelled && active.kind === 'erase') {
-      if (active.erased.length > 0) {
-        this.callbacks.onEraseStrokes(active.pageId, active.erased);
+      if (page && active.masks.size > 0) {
+        const edits: StrokeEdit[] = [];
+        for (const s of page.reg.getStrokes()) {
+          const mask = active.masks.get(s.id);
+          if (!mask) continue;
+          edits.push({ before: s, after: this.segmentsFor(s, mask, true) });
+        }
+        if (edits.length > 0) this.callbacks.onEraseCommit(active.pageId, edits);
       }
-      // The doc no longer contains these strokes; drop the visual hide.
-      this.hiddenByPage.delete(active.pageId);
+      // The doc now holds the split result; drop the preview substitution.
+      // Pixels are identical, so no repaint is needed.
+      this.replaceByPage.delete(active.pageId);
     } else if (!cancelled && page && active.kind === 'lasso') {
       const ids: string[] = [];
       if (active.lasso.length >= 6) {
@@ -407,8 +433,8 @@ export class InkEngine {
       }
       this.callbacks.onLassoSelect(active.pageId, ids);
     } else if (cancelled && active.kind === 'erase') {
-      // Restore anything hidden during a cancelled erase.
-      this.hiddenByPage.delete(active.pageId);
+      // Restore anything previewed-away during a cancelled erase.
+      this.replaceByPage.delete(active.pageId);
       this.repaintPage(active.pageId);
     }
 
@@ -423,6 +449,7 @@ export class InkEngine {
     cancelAnimationFrame(active.raf);
     this.active = null;
     this.hiddenByPage.delete(active.pageId);
+    this.replaceByPage.delete(active.pageId);
     this.clearWet();
     this.callbacks.onStrokeEnd?.();
   }
@@ -455,26 +482,55 @@ export class InkEngine {
     }
   }
 
+  /** Partial erase: mask the points under the eraser and preview the stroke
+   *  as its surviving runs. The doc changes only on pointerup (one command). */
   private eraseAt(page: InternalPage, x: number, y: number): void {
     const active = this.active;
     if (!active) return;
-    const hidden = this.hiddenByPage.get(page.reg.id) ?? new Set<string>();
     const r = this.eraserRadius;
     let dirty: Rect | null = null;
+    let repl = this.replaceByPage.get(page.reg.id);
     for (const s of page.reg.getStrokes()) {
-      if (hidden.has(s.id)) continue;
       const b = cachedStrokeBounds(s);
-      if (x < b.x - r || x > b.x + b.w + r || y < b.y - r || y > b.y + b.h + r) continue;
-      if (strokeHitsCircle(s.points, s.width, x, y, r)) {
-        hidden.add(s.id);
-        active.erased.push(s.id);
+      const reach = r + s.width / 2;
+      if (
+        x < b.x - reach ||
+        x > b.x + b.w + reach ||
+        y < b.y - reach ||
+        y > b.y + b.h + reach
+      ) {
+        continue;
+      }
+      // Only keep a mask once it actually marks something, so untouched
+      // strokes never end up in the commit.
+      let mask = active.masks.get(s.id);
+      const fresh = !mask;
+      if (!mask) mask = new Uint8Array(Math.floor(s.points.length / 3));
+      if (maskStrokeUnderCircle(s.points, mask, x, y, reach)) {
+        if (fresh) active.masks.set(s.id, mask);
+        if (!repl) {
+          repl = new Map();
+          this.replaceByPage.set(page.reg.id, repl);
+        }
+        repl.set(s.id, this.segmentsFor(s, mask, false));
         dirty = dirty ? rectUnion(dirty, b) : { ...b };
       }
     }
     if (dirty) {
-      this.hiddenByPage.set(page.reg.id, hidden);
       this.repaintPage(page.reg.id, inflateRect(dirty, 4));
     }
+  }
+
+  /** Build the surviving segment strokes for a masked stroke. Preview ids are
+   *  deterministic; the committed edit gets fresh UUIDs. */
+  private segmentsFor(s: StrokeData, mask: Uint8Array, finalIds: boolean): StrokeData[] {
+    return splitPointsByMask(s.points, mask).map((points, i) => ({
+      id: finalIds ? crypto.randomUUID() : `${s.id}~${i}`,
+      tool: s.tool,
+      color: s.color,
+      width: s.width,
+      points,
+    }));
   }
 
   private toPageX(page: InternalPage, clientX: number): number {
@@ -601,6 +657,8 @@ export {
   rectsIntersect,
   inflateRect,
   strokeHitsCircle,
+  maskStrokeUnderCircle,
+  splitPointsByMask,
 } from './hittest';
 export { strokeOutline, outlineToPath, outlineToSvgPath } from './stroke';
 export {
@@ -617,6 +675,7 @@ export type {
   ToolKind,
   TemplateKind,
   StrokeData,
+  StrokeEdit,
   StrokeStyle,
   PageSize,
   Rect,

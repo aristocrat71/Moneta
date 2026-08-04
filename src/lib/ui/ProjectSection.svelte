@@ -26,8 +26,19 @@
   let dragOver = $state(false);
   let renameInput = $state<HTMLInputElement | null>(null);
 
-  const collapsed = $derived(project?.collapsed ?? false);
+  const collapsed = $derived(
+    project ? (project.collapsed ?? false) : settings.data.unfiledCollapsed,
+  );
   const name = $derived(project?.name ?? 'Unfiled');
+
+  function toggleCollapse() {
+    if (project) {
+      library.toggleCollapsed(project.id);
+    } else {
+      settings.data.unfiledCollapsed = !settings.data.unfiledCollapsed;
+      settings.save();
+    }
+  }
 
   // A freshly created project opens straight into rename.
   $effect(() => {
@@ -96,18 +107,14 @@
   ondrop={onDrop}
 >
   <div class="header">
-    {#if project}
-      <button
-        class="caret"
-        class:collapsed
-        aria-label={collapsed ? `Expand ${name}` : `Collapse ${name}`}
-        onclick={() => library.toggleCollapsed(project.id)}
-      >
-        <ChevronRight size={16} strokeWidth={1.5} />
-      </button>
-    {:else}
-      <span class="caret still"><ChevronRight size={16} strokeWidth={1.5} /></span>
-    {/if}
+    <button
+      class="caret"
+      class:collapsed
+      aria-label={collapsed ? `Expand ${name}` : `Collapse ${name}`}
+      onclick={toggleCollapse}
+    >
+      <ChevronRight size={16} strokeWidth={1.5} />
+    </button>
     {#if renaming}
       <input
         class="rename"
@@ -192,9 +199,6 @@
   }
   .caret.collapsed {
     transform: rotate(0deg);
-  }
-  .caret.still {
-    transform: rotate(90deg);
   }
   button.caret:hover {
     background: var(--surface-2);

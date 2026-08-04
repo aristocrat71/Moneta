@@ -1,10 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { ArrowLeft, ChevronDown, LayoutGrid } from '@lucide/svelte';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { ArrowLeft, LayoutGrid, Maximize2, Minimize2 } from '@lucide/svelte';
   import { session } from '$lib/store/session.svelte';
-  import { library } from '$lib/store/library.svelte';
-  import Menu from '$lib/ui/Menu.svelte';
-  import type { MenuItem } from '$lib/ui/menu';
+  import { beginWindowDrag } from '$lib/ui/window-drag';
 
   let {
     hidden,
@@ -16,29 +15,31 @@
 
   let renaming = $state(false);
   let draft = $state('');
-  let moveOpen = $state(false);
   let input = $state<HTMLInputElement | null>(null);
+  let fullscreen = $state(false);
 
   $effect(() => {
     if (renaming) input?.select();
   });
 
-  const moveItems = $derived.by((): MenuItem[] => [
-    ...library.projects.map((p) => ({
-      label: p.name,
-      disabled: session.projectId === p.id,
-      action: () => {
-        session.setProject(p.id);
-      },
-    })),
-    {
-      label: 'Unfiled',
-      disabled: session.projectId === null,
-      action: () => {
-        session.setProject(null);
-      },
-    },
-  ]);
+  $effect(() => {
+    void getCurrentWindow()
+      .isFullscreen()
+      .then((v) => (fullscreen = v));
+  });
+
+  async function toggleFullscreen() {
+    const win = getCurrentWindow();
+    const next = !(await win.isFullscreen());
+    await win.setFullscreen(next);
+    fullscreen = next;
+  }
+
+  function refreshFullscreen() {
+    void getCurrentWindow()
+      .isFullscreen()
+      .then((v) => (fullscreen = v));
+  }
 
   function commitRename() {
     renaming = false;
@@ -46,7 +47,9 @@
   }
 </script>
 
-<header class="bar" class:hidden data-tauri-drag-region>
+<svelte:window onresize={refreshFullscreen} />
+
+<header class="bar" class:hidden role="presentation" onmousedown={beginWindowDrag}>
   <button class="back" onclick={() => void goto('/')}>
     <ArrowLeft size={16} strokeWidth={1.5} />
     <span>Library</span>
@@ -76,17 +79,18 @@
       >
         {session.title}
       </button>
-      <div class="menu-anchor">
-        <button
-          class="caret"
-          aria-label="Move to project"
-          onclick={() => (moveOpen = !moveOpen)}
-          onpointerdown={(e) => e.stopPropagation()}
-        >
-          <ChevronDown size={14} strokeWidth={1.5} />
-        </button>
-        <Menu bind:open={moveOpen} items={moveItems} />
-      </div>
+      <button
+        class="fs"
+        title={fullscreen ? 'Exit full screen' : 'Full screen'}
+        aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+        onclick={toggleFullscreen}
+      >
+        {#if fullscreen}
+          <Minimize2 size={13} strokeWidth={1.5} />
+        {:else}
+          <Maximize2 size={13} strokeWidth={1.5} />
+        {/if}
+      </button>
     {/if}
   </div>
 
@@ -168,10 +172,7 @@
   .rename:focus {
     outline: none;
   }
-  .menu-anchor {
-    position: relative;
-  }
-  .caret {
+  .fs {
     display: grid;
     place-items: center;
     width: 22px;
@@ -179,7 +180,7 @@
     border-radius: 6px;
     color: var(--text-muted);
   }
-  .caret:hover {
+  .fs:hover {
     background: var(--surface-2);
     color: var(--text);
   }

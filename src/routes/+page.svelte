@@ -7,6 +7,7 @@
   import { theme } from '$lib/store/theme.svelte';
   import { ui } from '$lib/store/ui.svelte';
   import Menu from '$lib/ui/Menu.svelte';
+  import { beginWindowDrag } from '$lib/ui/window-drag';
   import LibrarySearch from '$lib/ui/LibrarySearch.svelte';
   import NotebookCard from '$lib/ui/NotebookCard.svelte';
   import ProjectSection from '$lib/ui/ProjectSection.svelte';
@@ -15,22 +16,22 @@
   let newMenuOpen = $state(false);
   let searchOpen = $state(false);
 
-  const empty = $derived(library.loaded && library.notebooks.length === 0);
+  const empty = $derived(
+    library.loaded && library.notebooks.length === 0 && library.projects.length === 0,
+  );
 
   async function createNotebook() {
     const id = await library.createNotebook(null, settings.data.lastTemplate);
     if (id) void goto(`/notebook/${id}`);
   }
 
+  async function createProject() {
+    ui.renameProjectId = await library.createProject('New project');
+  }
+
   const newMenuItems: MenuItem[] = [
     { label: 'New notebook', icon: SquarePen, action: () => void createNotebook() },
-    {
-      label: 'New project',
-      icon: FolderPlus,
-      action: async () => {
-        ui.renameProjectId = await library.createProject('New project');
-      },
-    },
+    { label: 'New project', icon: FolderPlus, action: () => void createProject() },
   ];
 
   function onKeydown(e: KeyboardEvent) {
@@ -49,8 +50,8 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div class="library">
-  <header data-tauri-drag-region>
-    <span class="wordmark" data-tauri-drag-region>Moneta</span>
+  <header role="presentation" onmousedown={beginWindowDrag}>
+    <span class="wordmark" role="presentation" onmousedown={beginWindowDrag}>Moneta</span>
     <div class="tools">
       <LibrarySearch bind:open={searchOpen} />
       <button
@@ -81,15 +82,15 @@
     {#if empty}
       <div class="empty">
         <div class="ghost-sheet"></div>
-        <p>No notebooks yet.</p>
-        <button class="primary" onclick={createNotebook}>Create your first notebook</button>
+        <p>No projects yet.</p>
+        <button class="primary" onclick={createProject}>Create your first project</button>
       </div>
     {:else if library.loaded}
       {#if library.recent.length > 0}
         <span class="eyebrow">Recent</span>
         <div class="recent-row">
           {#each library.recent as nb (nb.id)}
-            <NotebookCard {nb} />
+            <NotebookCard {nb} showProject />
           {/each}
         </div>
       {/if}

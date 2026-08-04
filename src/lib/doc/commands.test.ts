@@ -7,6 +7,7 @@ import {
   cmdEraseStrokes,
   cmdRecolorStrokes,
   cmdReorderPages,
+  cmdSplitStrokes,
   cmdTransformStrokes,
   transformPoints,
   widthScale,
@@ -48,6 +49,28 @@ describe('command inverses', () => {
     const h = new History();
     h.push(doc, cmdEraseStrokes(pageId, ['a', 'c']));
     expect(doc.pages[0].strokes.map((s) => s.id)).toEqual(['b']);
+    h.undo(doc);
+    expect(snapshot(doc)).toBe(before);
+  });
+
+  test('split (partial erase) replaces in place and round-trips', () => {
+    const { doc, pageId } = docWithStrokes();
+    const before = snapshot(doc);
+    const h = new History();
+    const seg1 = stroke('b1', [0, 0, 0.5, 4, 4, 0.5]);
+    const seg2 = stroke('b2', [8, 8, 0.5, 10, 10, 0.5]);
+    h.push(
+      doc,
+      cmdSplitStrokes(pageId, [
+        { before: doc.pages[0].strokes[1], after: [seg1, seg2] }, // b → two runs
+        { before: doc.pages[0].strokes[2], after: [] }, // c → fully erased
+      ]),
+    );
+    expect(doc.pages[0].strokes.map((s) => s.id)).toEqual(['a', 'b1', 'b2']);
+    h.undo(doc);
+    expect(snapshot(doc)).toBe(before);
+    h.redo(doc);
+    expect(doc.pages[0].strokes.map((s) => s.id)).toEqual(['a', 'b1', 'b2']);
     h.undo(doc);
     expect(snapshot(doc)).toBe(before);
   });

@@ -13,7 +13,7 @@
   import ConfirmSheet from './ConfirmSheet.svelte';
   import type { MenuItem } from './menu';
 
-  let { nb }: { nb: NotebookMeta } = $props();
+  let { nb, showProject = false }: { nb: NotebookMeta; showProject?: boolean } = $props();
 
   let menuOpen = $state(false);
   let renaming = $state(false);
@@ -21,6 +21,7 @@
   let confirmDelete = $state(false);
 
   const thumb = $derived(library.thumbSrc(nb.id, theme.dark));
+  const projectName = $derived(showProject ? library.projectName(nb.projectId) : null);
 
   async function runExport(kind: ExportKind) {
     try {
@@ -99,16 +100,19 @@
     {#if thumb}
       <img src={thumb} alt="" draggable="false" />
     {/if}
-    <div class="menu-anchor">
+    <!-- Clicks inside the menu must never bubble into the card's open(). -->
+    <div
+      class="menu-anchor"
+      role="presentation"
+      onclick={(e) => e.stopPropagation()}
+      onpointerdown={(e) => e.stopPropagation()}
+      ondragstart={(e) => e.stopPropagation()}
+    >
       <button
         class="more"
         class:open={menuOpen}
         aria-label="Notebook actions"
-        onclick={(e) => {
-          e.stopPropagation();
-          menuOpen = !menuOpen;
-        }}
-        onpointerdown={(e) => e.stopPropagation()}
+        onclick={() => (menuOpen = !menuOpen)}
       >
         <MoreHorizontal size={16} strokeWidth={1.5} />
       </button>
@@ -132,7 +136,11 @@
   {:else}
     <span class="title">{nb.title}</span>
   {/if}
-  <span class="meta">{pagesLabel(nb.pageCount)} · {relTime(nb.modifiedAt)}</span>
+  <span class="meta">
+    {pagesLabel(nb.pageCount)}{projectName ? ` · ${projectName}` : ''} · {relTime(
+      nb.modifiedAt,
+    )}
+  </span>
 </div>
 
 <ConfirmSheet
@@ -226,5 +234,8 @@
   .meta {
     font-size: 12px;
     color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 </style>

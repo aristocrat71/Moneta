@@ -51,6 +51,13 @@ export interface StrokeStyle {
   width: number;
 }
 
+/** A partial-erase edit: one original stroke replaced by its surviving runs
+ *  (empty when the whole stroke was erased). */
+export interface StrokeEdit {
+  before: StrokeData;
+  after: StrokeData[];
+}
+
 /** Tunable feel constants — surfaced in the ?dev panel. */
 export interface InkTuning {
   pressureGamma: number;

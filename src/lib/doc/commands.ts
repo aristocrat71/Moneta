@@ -2,7 +2,7 @@
 // UI code never mutates the document directly.
 
 import type { DocPage, NotebookDoc } from './model';
-import type { Mat, StrokeData } from '$lib/ink/engine';
+import type { Mat, StrokeData, StrokeEdit } from '$lib/ink/engine';
 
 export interface Command {
   label: string;
@@ -129,6 +129,35 @@ export function cmdEraseStrokes(pageId: string, ids: string[], label = 'Erase'):
     undo(doc) {
       const page = mustPage(doc, pageId);
       // Re-insert at original indices, ascending, so ordering round-trips.
+      for (const { index, stroke } of saved ?? []) {
+        page.strokes.splice(Math.min(index, page.strokes.length), 0, stroke);
+      }
+    },
+  };
+}
+
+/** Partial erase: each original stroke is replaced in place by its surviving
+ *  segments (possibly none). Undo restores the originals exactly. */
+export function cmdSplitStrokes(pageId: string, edits: StrokeEdit[], label = 'Erase'): Command {
+  const replaceMap = new Map(edits.map((e) => [e.before.id, e.after]));
+  const afterIds = new Set(edits.flatMap((e) => e.after.map((s) => s.id)));
+  let saved: { index: number; stroke: StrokeData }[] | null = null;
+  return {
+    label,
+    pageIds: [pageId],
+    do(doc) {
+      const page = mustPage(doc, pageId);
+      if (!saved) {
+        saved = [];
+        page.strokes.forEach((stroke, index) => {
+          if (replaceMap.has(stroke.id)) saved!.push({ index, stroke });
+        });
+      }
+      page.strokes = page.strokes.flatMap((s) => replaceMap.get(s.id) ?? [s]);
+    },
+    undo(doc) {
+      const page = mustPage(doc, pageId);
+      page.strokes = page.strokes.filter((s) => !afterIds.has(s.id));
       for (const { index, stroke } of saved ?? []) {
         page.strokes.splice(Math.min(index, page.strokes.length), 0, stroke);
       }

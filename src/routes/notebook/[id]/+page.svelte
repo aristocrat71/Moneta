@@ -23,6 +23,7 @@
     cmdEraseStrokes,
     cmdRecolorStrokes,
     cmdReorderPages,
+    cmdSplitStrokes,
     cmdTransformStrokes,
     transformPoints,
   } from '$lib/doc/commands';
@@ -85,8 +86,8 @@
     onCommitStroke(pageId, stroke) {
       session.apply(cmdAddStroke(pageId, stroke), false);
     },
-    onEraseStrokes(pageId, ids) {
-      session.apply(cmdEraseStrokes(pageId, ids), false);
+    onEraseCommit(pageId, edits) {
+      session.apply(cmdSplitStrokes(pageId, edits), false);
     },
     onLassoSelect(pageId, ids) {
       selection = ids.length > 0 ? { pageId, ids, bounds: boundsOf(pageId, ids) } : null;

@@ -106,6 +106,75 @@ export function strokeBounds(points: number[], width: number): Rect {
   };
 }
 
+/**
+ * Mark the points of a stroke touched by an eraser circle. Works per segment
+ * (both endpoints of any touched segment are marked) so a fast, sparse stroke
+ * can't slip between sample points. Returns true when new points were marked.
+ */
+export function maskStrokeUnderCircle(
+  points: number[],
+  mask: Uint8Array,
+  cx: number,
+  cy: number,
+  reach: number,
+): boolean {
+  const n = Math.floor(points.length / 3);
+  const reachSq = reach * reach;
+  let changed = false;
+  if (n === 1) {
+    const dx = points[0] - cx;
+    const dy = points[1] - cy;
+    if (!mask[0] && dx * dx + dy * dy <= reachSq) {
+      mask[0] = 1;
+      changed = true;
+    }
+    return changed;
+  }
+  for (let i = 0; i + 1 < n; i++) {
+    if (mask[i] && mask[i + 1]) continue;
+    const d = distSqPointToSegment(
+      cx,
+      cy,
+      points[i * 3],
+      points[i * 3 + 1],
+      points[(i + 1) * 3],
+      points[(i + 1) * 3 + 1],
+    );
+    if (d <= reachSq) {
+      if (!mask[i]) {
+        mask[i] = 1;
+        changed = true;
+      }
+      if (!mask[i + 1]) {
+        mask[i + 1] = 1;
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
+/**
+ * Split a stroke's flat points into the surviving runs of consecutive
+ * unmasked points. Runs shorter than `minRun` points are dropped (a lone
+ * leftover point is debris, not ink).
+ */
+export function splitPointsByMask(points: number[], mask: Uint8Array, minRun = 2): number[][] {
+  const n = Math.floor(points.length / 3);
+  const runs: number[][] = [];
+  let run: number[] = [];
+  for (let i = 0; i < n; i++) {
+    if (mask[i]) {
+      if (run.length >= minRun * 3) runs.push(run);
+      run = [];
+      continue;
+    }
+    run.push(points[i * 3], points[i * 3 + 1], points[i * 3 + 2]);
+  }
+  if (run.length >= minRun * 3) runs.push(run);
+  return runs;
+}
+
 export function rectsIntersect(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }

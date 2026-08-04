@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import {
   distSqPointToSegment,
+  maskStrokeUnderCircle,
   pointInPolygon,
   polygonBounds,
   rectsIntersect,
   rectUnion,
+  splitPointsByMask,
   strokeBounds,
   strokeHitsCircle,
   strokeInPolygon,
@@ -76,6 +78,47 @@ describe('strokeInPolygon', () => {
   });
   test('rejects a fully external stroke via bounds pre-check', () => {
     expect(strokeInPolygon(line(300, 300, 400, 400), big)).toBe(false);
+  });
+});
+
+describe('partial-erase masking', () => {
+  test('masks the points under the eraser circle', () => {
+    const stroke = line(0, 0, 100, 0, 10); // points every 10 units
+    const mask = new Uint8Array(11);
+    const changed = maskStrokeUnderCircle(stroke, mask, 50, 0, 12);
+    expect(changed).toBe(true);
+    // Segments 30–40 … 60–70 come within reach 12 of x=50 → endpoints 30..70.
+    expect(Array.from(mask)).toEqual([0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0]);
+    // A second identical pass marks nothing new.
+    expect(maskStrokeUnderCircle(stroke, mask, 50, 0, 12)).toBe(false);
+  });
+
+  test('catches a crossing between sparse points (segment test)', () => {
+    // Two points 100 apart; eraser sits on the middle of the segment.
+    const stroke = [0, 0, 0.5, 100, 0, 0.5];
+    const mask = new Uint8Array(2);
+    expect(maskStrokeUnderCircle(stroke, mask, 50, 5, 8)).toBe(true);
+    expect(Array.from(mask)).toEqual([1, 1]);
+  });
+
+  test('splitPointsByMask keeps surviving runs and drops debris', () => {
+    const stroke = line(0, 0, 100, 0, 10);
+    const mask = new Uint8Array(11);
+    mask[4] = 1;
+    mask[5] = 1;
+    const runs = splitPointsByMask(stroke, mask);
+    expect(runs).toHaveLength(2);
+    expect(runs[0].length).toBe(4 * 3); // points 0..3
+    expect(runs[1].length).toBe(5 * 3); // points 6..10
+    expect(runs[1][0]).toBeCloseTo(60);
+  });
+
+  test('a fully masked stroke yields no runs; a lone survivor is dropped', () => {
+    const stroke = line(0, 0, 20, 0, 2); // 3 points
+    const all = new Uint8Array([1, 1, 1]);
+    expect(splitPointsByMask(stroke, all)).toHaveLength(0);
+    const lone = new Uint8Array([1, 0, 1]);
+    expect(splitPointsByMask(stroke, lone)).toHaveLength(0);
   });
 });
 

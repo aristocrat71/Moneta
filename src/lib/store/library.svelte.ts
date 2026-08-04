@@ -44,7 +44,12 @@ class LibraryStore {
   }
 
   get recent(): NotebookMeta[] {
-    return [...this.notebooks].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, 6);
+    return [...this.notebooks].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, 5);
+  }
+
+  projectName(id: string | null): string | null {
+    if (id === null) return null;
+    return this.projects.find((p) => p.id === id)?.name ?? null;
   }
 
   private projectIds(): Set<string> {

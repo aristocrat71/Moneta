@@ -18,6 +18,7 @@ export interface SettingsData {
   lastTemplate: TemplateKind;
   pressureGamma: number;
   recentColors: string[];
+  unfiledCollapsed: boolean;
 }
 
 const DEFAULTS: SettingsData = {
@@ -32,6 +33,7 @@ const DEFAULTS: SettingsData = {
   lastTemplate: 'ruled',
   pressureGamma: 1,
   recentColors: [],
+  unfiledCollapsed: false,
 };
 
 class SettingsStore {

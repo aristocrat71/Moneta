@@ -128,7 +128,13 @@
         onblur={commitRename}
       />
     {:else}
-      <span class="name">{name}</span>
+      <button
+        class="name"
+        title={collapsed ? `Expand ${name}` : `Collapse ${name}`}
+        onclick={toggleCollapse}
+      >
+        {name}
+      </button>
     {/if}
     {#if project}
       <div class="menu-anchor">
@@ -205,8 +211,14 @@
     color: var(--text);
   }
   .name {
+    padding: 2px 6px;
+    margin-left: -2px;
+    border-radius: 6px;
     font-size: 14px;
     font-weight: 550;
+  }
+  .name:hover {
+    background: var(--surface-2);
   }
   .rename {
     font-size: 14px;

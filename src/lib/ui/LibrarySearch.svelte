@@ -3,7 +3,6 @@
   import { Search } from '@lucide/svelte';
   import { library } from '$lib/store/library.svelte';
   import { settings } from '$lib/store/settings.svelte';
-  import { ui } from '$lib/store/ui.svelte';
   import { fuzzyScore } from '$lib/util/fuzzy';
   import { pagesLabel, relTime } from '$lib/util/format';
 
@@ -64,12 +63,6 @@
           const id = await library.createNotebook(null, settings.data.lastTemplate);
           if (id) void goto(`/notebook/${id}`);
         },
-      },
-      {
-        kind: 'action',
-        label: 'Settings',
-        detail: '⌘,',
-        run: () => (ui.settingsOpen = true),
       },
     ];
     for (const a of actions) {

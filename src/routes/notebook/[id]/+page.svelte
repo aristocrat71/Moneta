@@ -256,6 +256,41 @@
     });
   }
 
+  /**
+   * Resume where the ink left off: jump to the most recent stroke on the last
+   * open page (searching back for the nearest page that has ink), so reopening
+   * a long notebook lands on the writing rather than the top of the sheet.
+   */
+  function scrollToResume(): void {
+    const s = scroller;
+    const doc = session.doc;
+    if (!s || !doc) return;
+    const start = Math.min(Math.max(0, session.currentPage), doc.pages.length - 1);
+    let target = -1;
+    for (let i = start; i >= 0; i--) {
+      if (doc.pages[i].strokes.length > 0) {
+        target = i;
+        break;
+      }
+    }
+    if (target < 0) {
+      scrollToPage(start, false);
+      return;
+    }
+    const strokes = doc.pages[target].strokes;
+    const last = strokes[strokes.length - 1];
+    let maxY = 0;
+    for (let i = 1; i < last.points.length; i += 3) {
+      if (last.points[i] > maxY) maxY = last.points[i];
+    }
+    // Put the stroke's lower edge just under the middle of the viewport.
+    const top = pageOffset(target) + maxY * zoom - s.clientHeight * 0.55;
+    s.scrollTo({
+      top: Math.max(0, Math.min(top, s.scrollHeight - s.clientHeight)),
+      behavior: 'auto',
+    });
+  }
+
   function onWheel(e: WheelEvent): void {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -602,7 +637,7 @@
       onResize();
       fitWidth();
       await tick();
-      scrollToPage(session.currentPage, false);
+      scrollToResume();
       updateVisible();
     })();
 

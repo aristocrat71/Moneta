@@ -16,12 +16,40 @@
 
   let el = $state<HTMLDivElement | null>(null);
   let stack = $state<MenuItem[][]>([]);
+  /** Flips above the trigger when there isn't room below. */
+  let flipped = $state(false);
+  let maxHeight = $state<number | null>(null);
 
   const current = $derived(stack.length > 0 ? stack[stack.length - 1] : items);
+
+  const MARGIN = 12;
+
+  /** Fit the panel to the viewport: prefer downward, flip up when that side
+   *  has more room, and cap the height so every item stays reachable. */
+  function fit() {
+    const anchor = el?.parentElement;
+    if (!el || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    const below = window.innerHeight - rect.bottom - MARGIN;
+    const above = rect.top - MARGIN;
+    const wanted = el.scrollHeight;
+    const useUp = up || (wanted > below && above > below);
+    flipped = useUp;
+    const room = useUp ? above : below;
+    maxHeight = wanted > room ? Math.max(120, room) : null;
+  }
+
+  $effect(() => {
+    // Re-fit whenever the panel opens or its contents change.
+    void current;
+    if (open) fit();
+  });
 
   $effect(() => {
     if (!open) {
       stack = [];
+      maxHeight = null;
+      flipped = false;
       return;
     }
     const onDown = (e: PointerEvent) => {
@@ -35,9 +63,11 @@
     };
     window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('keydown', onKey, true);
+    window.addEventListener('resize', fit);
     return () => {
       window.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('resize', fit);
     };
   });
 
@@ -56,9 +86,10 @@
   <div
     bind:this={el}
     class="menu"
-    class:up
+    class:up={flipped}
     style:left={align === 'left' ? '0' : 'auto'}
     style:right={align === 'right' ? '0' : 'auto'}
+    style:max-height={maxHeight ? `${maxHeight}px` : null}
     role="menu"
     tabindex="-1"
   >
@@ -101,6 +132,8 @@
     border-radius: 10px;
     box-shadow: var(--shadow-sheet);
     animation: rise 160ms ease-out;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .menu.up {
     top: auto;

@@ -1,7 +1,7 @@
 <script lang="ts">
   // The Library — see all your ink, resume in one click (DESIGN.md §3).
   import { goto } from '$app/navigation';
-  import { Contrast, FolderPlus, Plus, SquarePen } from '@lucide/svelte';
+  import { Contrast, FolderPlus, Plus, Settings, SquarePen } from '@lucide/svelte';
   import { library } from '$lib/store/library.svelte';
   import { settings } from '$lib/store/settings.svelte';
   import { theme } from '$lib/store/theme.svelte';
@@ -56,6 +56,14 @@
       <LibrarySearch bind:open={searchOpen} />
       <button
         class="icon-btn"
+        title="Settings  ⌘,"
+        aria-label="Settings"
+        onclick={() => (ui.settingsOpen = true)}
+      >
+        <Settings size={16} strokeWidth={1.5} />
+      </button>
+      <button
+        class="icon-btn"
         title="Theme"
         aria-label="Toggle theme"
         onclick={() => theme.toggle()}
@@ -81,7 +89,6 @@
   <main>
     {#if empty}
       <div class="empty">
-        <div class="ghost-sheet"></div>
         <p>No projects yet.</p>
         <button class="primary" onclick={createProject}>Create your first project</button>
       </div>
@@ -118,15 +125,19 @@
     height: 100vh;
   }
   header {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     height: 56px;
     /* left padding clears the macOS traffic lights (overlay title bar) */
     padding: 0 20px 0 84px;
     flex: none;
   }
   .wordmark {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     font-size: 14px;
     font-weight: 550;
   }
@@ -182,13 +193,6 @@
     justify-content: center;
     gap: 16px;
     height: 100%;
-  }
-  .ghost-sheet {
-    width: 226px;
-    height: 320px;
-    border: 1px dashed var(--border);
-    border-radius: 4px;
-    background: var(--canvas);
   }
   .empty p {
     font-size: 14px;

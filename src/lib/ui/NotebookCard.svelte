@@ -100,24 +100,25 @@
     {#if thumb}
       <img src={thumb} alt="" draggable="false" />
     {/if}
-    <!-- Clicks inside the menu must never bubble into the card's open(). -->
-    <div
-      class="menu-anchor"
-      role="presentation"
-      onclick={(e) => e.stopPropagation()}
-      onpointerdown={(e) => e.stopPropagation()}
-      ondragstart={(e) => e.stopPropagation()}
+  </div>
+  <!-- Outside .thumb: that box clips overflow, which would cut the menu off.
+       Clicks inside the menu must never bubble into the card's open(). -->
+  <div
+    class="menu-anchor"
+    role="presentation"
+    onclick={(e) => e.stopPropagation()}
+    onpointerdown={(e) => e.stopPropagation()}
+    ondragstart={(e) => e.stopPropagation()}
+  >
+    <button
+      class="more"
+      class:open={menuOpen}
+      aria-label="Notebook actions"
+      onclick={() => (menuOpen = !menuOpen)}
     >
-      <button
-        class="more"
-        class:open={menuOpen}
-        aria-label="Notebook actions"
-        onclick={() => (menuOpen = !menuOpen)}
-      >
-        <MoreHorizontal size={16} strokeWidth={1.5} />
-      </button>
-      <Menu bind:open={menuOpen} items={menuItems} align="right" />
-    </div>
+      <MoreHorizontal size={16} strokeWidth={1.5} />
+    </button>
+    <Menu bind:open={menuOpen} items={menuItems} align="right" />
   </div>
   {#if renaming}
     <!-- svelte-ignore a11y_autofocus -->
@@ -154,6 +155,7 @@
 
 <style>
   .card {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -190,6 +192,7 @@
     position: absolute;
     top: 8px;
     right: 8px;
+    z-index: 2;
   }
   .more {
     display: grid;

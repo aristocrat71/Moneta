@@ -1,0 +1,137 @@
+/* ————— Moneta design tokens (DESIGN.md §2.1) ————— */
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #edebe6;
+  --border: #dedbd4;
+  --text: #1d1c1a;
+  --text-muted: #75726b;
+  --accent: #3e5c8a;
+  --accent-ink: #ffffff;
+  --danger: #a8442f;
+  --canvas: #fcfbf8;
+  --template-line: #e4e1d8;
+  --scrim: rgb(29 28 26 / 0.32);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px rgb(0 0 0 / 0.08);
+  --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.07), 0 12px 32px rgb(0 0 0 / 0.11);
+  --shadow-sheet: 0 1px 2px rgb(0 0 0 / 0.05), 0 16px 48px rgb(0 0 0 / 0.14);
+  --shadow-page: 0 1px 2px rgb(0 0 0 / 0.05), 0 6px 20px rgb(0 0 0 / 0.06);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #161719;
+  --surface: #1f2124;
+  --surface-2: #2a2d31;
+  --border: #33363b;
+  --text: #e9e7e1;
+  --text-muted: #8d8b85;
+  --accent: #8aa6d6;
+  --accent-ink: #14161a;
+  --danger: #c96a54;
+  --canvas: #1b1d20;
+  --template-line: #2b2e33;
+  --scrim: rgb(0 0 0 / 0.5);
+  --shadow-card: 0 0 0 1px var(--border);
+  --shadow-card-hover: 0 0 0 1px var(--border), 0 8px 24px rgb(0 0 0 / 0.4);
+  --shadow-sheet: 0 0 0 1px var(--border), 0 16px 48px rgb(0 0 0 / 0.5);
+  --shadow-page: 0 0 0 1px var(--border);
+}
+
+/* ————— Base ————— */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  font-feature-settings:
+    'liga' 0,
+    'zero' 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Theme switch: 150ms crossfade — nothing moves, only material changes. */
+html.theme-xfade,
+html.theme-xfade * {
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out,
+    border-color 150ms ease-out,
+    box-shadow 150ms ease-out !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

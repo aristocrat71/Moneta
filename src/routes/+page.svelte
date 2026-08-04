@@ -1,156 +1,207 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
+  // The Library — see all your ink, resume in one click (DESIGN.md §3).
+  import { goto } from '$app/navigation';
+  import { Contrast, FolderPlus, Plus, SquarePen } from '@lucide/svelte';
+  import { library } from '$lib/store/library.svelte';
+  import { settings } from '$lib/store/settings.svelte';
+  import { theme } from '$lib/store/theme.svelte';
+  import { ui } from '$lib/store/ui.svelte';
+  import Menu from '$lib/ui/Menu.svelte';
+  import LibrarySearch from '$lib/ui/LibrarySearch.svelte';
+  import NotebookCard from '$lib/ui/NotebookCard.svelte';
+  import ProjectSection from '$lib/ui/ProjectSection.svelte';
+  import type { MenuItem } from '$lib/ui/menu';
 
-  let name = $state("");
-  let greetMsg = $state("");
+  let newMenuOpen = $state(false);
+  let searchOpen = $state(false);
 
-  async function greet(event: Event) {
-    event.preventDefault();
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsg = await invoke("greet", { name });
+  const empty = $derived(library.loaded && library.notebooks.length === 0);
+
+  async function createNotebook() {
+    const id = await library.createNotebook(null, settings.data.lastTemplate);
+    if (id) void goto(`/notebook/${id}`);
+  }
+
+  const newMenuItems: MenuItem[] = [
+    { label: 'New notebook', icon: SquarePen, action: () => void createNotebook() },
+    {
+      label: 'New project',
+      icon: FolderPlus,
+      action: async () => {
+        ui.renameProjectId = await library.createProject('New project');
+      },
+    },
+  ];
+
+  function onKeydown(e: KeyboardEvent) {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      searchOpen = true;
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
+      e.preventDefault();
+      void createNotebook();
+    }
   }
 </script>
 
-<main class="container">
-  <h1>Welcome to Tauri + Svelte</h1>
+<svelte:window onkeydown={onKeydown} />
 
-  <div class="row">
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo vite" alt="Vite Logo" />
-    </a>
-    <a href="https://tauri.app" target="_blank">
-      <img src="/tauri.svg" class="logo tauri" alt="Tauri Logo" />
-    </a>
-    <a href="https://svelte.dev" target="_blank">
-      <img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
-    </a>
-  </div>
-  <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
+<div class="library">
+  <header data-tauri-drag-region>
+    <span class="wordmark" data-tauri-drag-region>Moneta</span>
+    <div class="tools">
+      <LibrarySearch bind:open={searchOpen} />
+      <button
+        class="icon-btn"
+        title="Theme"
+        aria-label="Toggle theme"
+        onclick={() => theme.toggle()}
+      >
+        <Contrast size={16} strokeWidth={1.5} />
+      </button>
+      <div class="menu-anchor">
+        <button
+          class="icon-btn"
+          class:open={newMenuOpen}
+          title="New"
+          aria-label="Create"
+          onclick={() => (newMenuOpen = !newMenuOpen)}
+          onpointerdown={(e) => e.stopPropagation()}
+        >
+          <Plus size={18} strokeWidth={1.5} />
+        </button>
+        <Menu bind:open={newMenuOpen} items={newMenuItems} align="right" />
+      </div>
+    </div>
+  </header>
 
-  <form class="row" onsubmit={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p>
-</main>
+  <main>
+    {#if empty}
+      <div class="empty">
+        <div class="ghost-sheet"></div>
+        <p>No notebooks yet.</p>
+        <button class="primary" onclick={createNotebook}>Create your first notebook</button>
+      </div>
+    {:else if library.loaded}
+      {#if library.recent.length > 0}
+        <span class="eyebrow">Recent</span>
+        <div class="recent-row">
+          {#each library.recent as nb (nb.id)}
+            <NotebookCard {nb} />
+          {/each}
+        </div>
+      {/if}
+
+      {#if library.projects.length > 0}
+        <span class="eyebrow">Projects</span>
+      {/if}
+      {#each library.projects as project (project.id)}
+        <div id={`project-${project.id}`}>
+          <ProjectSection {project} notebooks={library.notebooksIn(project.id)} />
+        </div>
+      {/each}
+
+      {#if library.unfiled.length > 0}
+        <ProjectSection project={null} notebooks={library.unfiled} />
+      {/if}
+    {/if}
+  </main>
+</div>
 
 <style>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.svelte-kit:hover {
-  filter: drop-shadow(0 0 2em #ff3e00);
-}
-
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
+  .library {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
   }
-
-  a:hover {
-    color: #24c8db;
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    /* left padding clears the macOS traffic lights (overlay title bar) */
+    padding: 0 20px 0 84px;
+    flex: none;
   }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
+  .wordmark {
+    font-size: 14px;
+    font-weight: 550;
   }
-  button:active {
-    background-color: #0f0f0f69;
+  .tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
-}
-
+  .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: var(--text-muted);
+  }
+  .icon-btn:hover,
+  .icon-btn.open {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .menu-anchor {
+    position: relative;
+  }
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 32px 64px;
+  }
+  .eyebrow {
+    display: block;
+    margin: 8px 0 12px;
+    font-size: 12px;
+    font-weight: 550;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .recent-row {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin-bottom: 32px;
+  }
+  .recent-row > :global(*) {
+    flex: none;
+  }
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    height: 100%;
+  }
+  .ghost-sheet {
+    width: 226px;
+    height: 320px;
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    background: var(--canvas);
+  }
+  .empty p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .primary {
+    padding: 8px 16px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 550;
+  }
+  .primary:hover {
+    filter: brightness(1.08);
+  }
 </style>

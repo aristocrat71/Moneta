@@ -175,6 +175,97 @@ export function splitPointsByMask(points: number[], mask: Uint8Array, minRun = 2
   return runs;
 }
 
+/**
+ * Clip one stroke run against an eraser disk. Unlike the mask-based split,
+ * segments are cut exactly where they cross the circle (with interpolated
+ * pressure), so the erased hole is never larger than the disk itself.
+ * Returns the surviving runs, or null when the disk doesn't touch the run.
+ */
+export function clipRunAgainstCircle(
+  points: number[],
+  cx: number,
+  cy: number,
+  r: number,
+): number[][] | null {
+  const n = Math.floor(points.length / 3);
+  if (n === 0) return null;
+  const rSq = r * r;
+  if (n === 1) {
+    const dx = points[0] - cx;
+    const dy = points[1] - cy;
+    return dx * dx + dy * dy <= rSq ? [] : null;
+  }
+  let touches = false;
+  for (let i = 0; i + 1 < n; i++) {
+    const k = i * 3;
+    if (
+      distSqPointToSegment(cx, cy, points[k], points[k + 1], points[k + 3], points[k + 4]) <=
+      rSq
+    ) {
+      touches = true;
+      break;
+    }
+  }
+  if (!touches) return null;
+
+  const EPS = 1e-4;
+  const out: number[][] = [];
+  let cur: number[] = [];
+  const close = () => {
+    // A lone leftover point is debris, not ink.
+    if (cur.length >= 6) out.push(cur);
+    cur = [];
+  };
+  const d0x = points[0] - cx;
+  const d0y = points[1] - cy;
+  if (d0x * d0x + d0y * d0y > rSq) cur.push(points[0], points[1], points[2]);
+  for (let i = 0; i + 1 < n; i++) {
+    const k = i * 3;
+    const ax = points[k];
+    const ay = points[k + 1];
+    const ap = points[k + 2];
+    const bx = points[k + 3];
+    const by = points[k + 4];
+    const bp = points[k + 5];
+    const dx = bx - ax;
+    const dy = by - ay;
+    const fx = ax - cx;
+    const fy = ay - cy;
+    const a2 = dx * dx + dy * dy;
+    // The sub-interval [u0, u1] of the segment that lies inside the disk.
+    let u0 = 1;
+    let u1 = 0;
+    if (a2 < 1e-12) {
+      if (fx * fx + fy * fy <= rSq) {
+        u0 = 0;
+        u1 = 1;
+      }
+    } else {
+      const b2 = 2 * (fx * dx + fy * dy);
+      const c2 = fx * fx + fy * fy - rSq;
+      const disc = b2 * b2 - 4 * a2 * c2;
+      if (disc >= 0) {
+        const sq = Math.sqrt(disc);
+        u0 = Math.max(0, (-b2 - sq) / (2 * a2));
+        u1 = Math.min(1, (-b2 + sq) / (2 * a2));
+      }
+    }
+    if (u0 > u1) {
+      cur.push(bx, by, bp); // fully outside — segment survives
+      continue;
+    }
+    if (u0 > EPS) {
+      cur.push(ax + dx * u0, ay + dy * u0, ap + (bp - ap) * u0);
+    }
+    close();
+    if (u1 < 1 - EPS) {
+      cur.push(ax + dx * u1, ay + dy * u1, ap + (bp - ap) * u1, bx, by, bp);
+    }
+  }
+  close();
+  return out;
+}
+
 export function rectsIntersect(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }

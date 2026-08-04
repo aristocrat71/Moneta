@@ -39,13 +39,15 @@ export function strokeOutline(
     input.push([x, y, applyGamma(p, tuning.pressureGamma)]);
   }
   const highlighter = opts.tool === 'highlighter';
+  // Shapes are exact geometry: constant width, no smoothing or streamline.
+  const shape = opts.tool === 'shape';
   return getStroke(input, {
     size: opts.width,
-    thinning: highlighter ? 0 : tuning.thinning,
-    smoothing: tuning.smoothing,
-    streamline: highlighter ? 0.4 : tuning.streamline,
+    thinning: highlighter || shape ? 0 : tuning.thinning,
+    smoothing: shape ? 0 : tuning.smoothing,
+    streamline: shape ? 0 : highlighter ? 0.4 : tuning.streamline,
     // Mouse input reports a constant 0.5 — simulate pressure from speed there.
-    simulatePressure: !pressured && !highlighter,
+    simulatePressure: !pressured && !highlighter && !shape,
     last: opts.last ?? true,
   });
 }

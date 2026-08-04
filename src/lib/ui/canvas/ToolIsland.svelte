@@ -1,33 +1,65 @@
 <script lang="ts">
   // The one floating tool island (DESIGN.md §4.2). Draggable via the grip;
   // position persists. The ink dot always carries the pen's current color.
-  import { Eraser, Highlighter, Lasso, Pen, Redo2, Undo2 } from '@lucide/svelte';
-  import { resolveInk, type ToolKind } from '$lib/ink/engine';
+  import {
+    Circle,
+    Eraser,
+    Highlighter,
+    Lasso,
+    Minus,
+    Pen,
+    Redo2,
+    Square,
+    Triangle,
+    Undo2,
+  } from '@lucide/svelte';
+  import { resolveInk, type ShapeKind, type ToolKind } from '$lib/ink/engine';
   import { session } from '$lib/store/session.svelte';
   import { settings } from '$lib/store/settings.svelte';
   import { theme } from '$lib/store/theme.svelte';
   import SwatchGrid from '$lib/ui/SwatchGrid.svelte';
-  import { HL_PRESETS, PEN_PRESETS, type ToolState } from './tool-state';
+  import {
+    ERASER_MAX,
+    ERASER_MIN,
+    ERASER_PRESETS,
+    HL_PRESETS,
+    PEN_PRESETS,
+    type ToolState,
+  } from './tool-state';
 
   let { tools }: { tools: ToolState } = $props();
 
   let island = $state<HTMLDivElement | null>(null);
   let pos = $state<{ x: number; y: number } | null>(settings.data.island);
-  let popover = $state<'color' | 'width' | null>(null);
+  let popover = $state<'color' | 'width' | 'shape' | null>(null);
   let below = $state(false);
 
   const drawTool = $derived(tools.tool === 'highlighter' ? 'highlighter' : 'pen');
+  const isEraser = $derived(tools.tool === 'eraser');
   const activeColor = $derived(drawTool === 'highlighter' ? tools.hlColor : tools.penColor);
-  const activeWidth = $derived(drawTool === 'highlighter' ? tools.hlWidth : tools.penWidth);
-  const presets = $derived(drawTool === 'highlighter' ? HL_PRESETS : PEN_PRESETS);
+  const activeWidth = $derived(
+    isEraser ? tools.eraserRadius : drawTool === 'highlighter' ? tools.hlWidth : tools.penWidth,
+  );
+  const presets = $derived(
+    isEraser ? ERASER_PRESETS : drawTool === 'highlighter' ? HL_PRESETS : PEN_PRESETS,
+  );
   const resolvedColor = $derived(resolveInk(activeColor, theme.dark));
 
   const toolButtons: { tool: ToolKind; icon: typeof Pen; label: string; key: string }[] = [
     { tool: 'pen', icon: Pen, label: 'Pen', key: 'P' },
+    { tool: 'shape', icon: Square, label: 'Shapes', key: 'R' },
     { tool: 'highlighter', icon: Highlighter, label: 'Highlighter', key: 'H' },
     { tool: 'eraser', icon: Eraser, label: 'Eraser', key: 'E' },
     { tool: 'lasso', icon: Lasso, label: 'Lasso', key: 'S' },
   ];
+
+  const SHAPE_OPTIONS: { kind: ShapeKind; icon: typeof Square; label: string }[] = [
+    { kind: 'line', icon: Minus, label: 'Line' },
+    { kind: 'rect', icon: Square, label: 'Rectangle' },
+    { kind: 'ellipse', icon: Circle, label: 'Circle' },
+    { kind: 'triangle', icon: Triangle, label: 'Triangle' },
+  ];
+  const ShapeIcon = $derived(SHAPE_OPTIONS.find((o) => o.kind === tools.shape)?.icon ?? Square);
 
   function setColor(color: string) {
     if (drawTool === 'highlighter') tools.hlColor = color;
@@ -35,17 +67,37 @@
   }
 
   function setWidth(width: number) {
-    if (drawTool === 'highlighter') tools.hlWidth = width;
+    if (isEraser) tools.eraserRadius = width;
+    else if (drawTool === 'highlighter') tools.hlWidth = width;
     else tools.penWidth = width;
   }
 
-  function togglePopover(which: 'color' | 'width') {
+  function presetDotSize(preset: number): number {
+    return isEraser ? Math.min(4 + preset, 22) : Math.min(4 + preset * 1.6, 22);
+  }
+
+  function togglePopover(which: 'color' | 'width' | 'shape') {
     if (popover === which) {
       popover = null;
       return;
     }
     below = (island?.getBoundingClientRect().top ?? 400) < 320;
     popover = which;
+  }
+
+  function pickTool(t: ToolKind) {
+    if (t === 'shape') {
+      // First tap selects the tool; a tap on the active tool opens the picker.
+      if (tools.tool !== 'shape') {
+        tools.tool = 'shape';
+        if (popover !== 'shape') togglePopover('shape');
+      } else {
+        togglePopover('shape');
+      }
+    } else {
+      tools.tool = t;
+      if (popover === 'shape') popover = null;
+    }
   }
 
   $effect(() => {
@@ -121,9 +173,10 @@
           >
             <span
               class="preset-dot"
-              style:width={`${Math.min(4 + preset * 1.6, 22)}px`}
-              style:height={`${Math.min(4 + preset * 1.6, 22)}px`}
-              style:background={resolvedColor}
+              class:hollow={isEraser}
+              style:width={`${presetDotSize(preset)}px`}
+              style:height={`${presetDotSize(preset)}px`}
+              style:background={isEraser ? 'transparent' : resolvedColor}
             ></span>
           </button>
         {/each}
@@ -132,20 +185,40 @@
       <input
         class="width-slider"
         type="range"
-        min="1"
-        max="32"
-        step="0.5"
+        min={isEraser ? ERASER_MIN : 1}
+        max={isEraser ? ERASER_MAX : 32}
+        step={isEraser ? 1 : 0.5}
         value={activeWidth}
-        aria-label="Stroke width"
+        aria-label={isEraser ? 'Eraser size' : 'Stroke width'}
         oninput={(e) => setWidth(Number(e.currentTarget.value))}
       />
       <div class="preview-well">
         <span
           class="preview-dot"
-          style:width={`${activeWidth}px`}
-          style:height={`${activeWidth}px`}
-          style:background={resolvedColor}
+          class:hollow={isEraser}
+          style:width={`${isEraser ? Math.min(activeWidth * 2, 40) : activeWidth}px`}
+          style:height={`${isEraser ? Math.min(activeWidth * 2, 40) : activeWidth}px`}
+          style:background={isEraser ? 'transparent' : resolvedColor}
         ></span>
+      </div>
+    </div>
+  {:else if popover === 'shape'}
+    <div class="popover shape-pop" class:below>
+      <div class="shape-row">
+        {#each SHAPE_OPTIONS as opt (opt.kind)}
+          <button
+            class="preset"
+            class:active={tools.shape === opt.kind}
+            title={opt.label}
+            aria-label={opt.label}
+            onclick={() => {
+              tools.shape = opt.kind;
+              popover = null;
+            }}
+          >
+            <opt.icon size={18} strokeWidth={1.5} />
+          </button>
+        {/each}
       </div>
     </div>
   {/if}
@@ -161,9 +234,13 @@
       title={`${tb.label}  ${tb.key}`}
       aria-label={tb.label}
       aria-pressed={tools.tool === tb.tool}
-      onclick={() => (tools.tool = tb.tool)}
+      onclick={() => pickTool(tb.tool)}
     >
-      <tb.icon size={18} strokeWidth={1.5} />
+      {#if tb.tool === 'shape'}
+        <ShapeIcon size={18} strokeWidth={1.5} />
+      {:else}
+        <tb.icon size={18} strokeWidth={1.5} />
+      {/if}
       {#if tb.tool === 'pen'}
         <span class="pen-dot" style:background={resolveInk(tools.penColor, theme.dark)}></span>
       {/if}
@@ -203,8 +280,8 @@
   </button>
   <button
     class="tool width-btn"
-    title="Stroke width  [ ]"
-    aria-label="Stroke width"
+    title={isEraser ? 'Eraser size  [ ]' : 'Stroke width  [ ]'}
+    aria-label={isEraser ? 'Eraser size' : 'Stroke width'}
     onclick={() => togglePopover('width')}
   >
     <span
@@ -338,6 +415,16 @@
   .preset-dot {
     border-radius: 999px;
   }
+  .preset-dot.hollow {
+    border: 1.5px solid var(--text);
+  }
+  .shape-pop {
+    min-width: 0;
+  }
+  .shape-row {
+    display: flex;
+    gap: 4px;
+  }
   .width-value {
     margin-left: auto;
     font-size: 12px;
@@ -359,5 +446,8 @@
   }
   .preview-dot {
     border-radius: 999px;
+  }
+  .preview-dot.hollow {
+    border: 1.5px solid var(--text);
   }
 </style>

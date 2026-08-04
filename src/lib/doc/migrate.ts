@@ -36,7 +36,7 @@ function normalizeStroke(raw: unknown): StrokeData | null {
   if (points.length === 0) return null;
   return {
     id: typeof s.id === 'string' ? s.id : crypto.randomUUID(),
-    tool: s.tool === 'highlighter' ? 'highlighter' : 'pen',
+    tool: s.tool === 'highlighter' || s.tool === 'shape' ? s.tool : 'pen',
     color: typeof s.color === 'string' ? s.color : 'ink/black',
     width: Math.max(0.5, asNumber(s.width, 3)),
     points,

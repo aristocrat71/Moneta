@@ -15,13 +15,13 @@ import {
 import { PageRenderer, applyStrokeStyle, cachedStrokeBounds } from './renderer';
 import { strokeOutline, outlineToPath } from './stroke';
 import {
+  clipRunAgainstCircle,
   inflateRect,
-  maskStrokeUnderCircle,
   polygonBounds,
   rectUnion,
-  splitPointsByMask,
   strokeInPolygon,
 } from './hittest';
+import { shapePoints } from './shapes';
 import { DEFAULT_TUNING } from './types';
 import type {
   DrawTool,
@@ -30,6 +30,7 @@ import type {
   PageSize,
   PageWindow,
   Rect,
+  ShapeKind,
   StrokeData,
   StrokeEdit,
   StrokeStyle,
@@ -65,7 +66,7 @@ interface InternalPage {
 }
 
 interface ActiveGesture {
-  kind: 'draw' | 'erase' | 'lasso';
+  kind: 'draw' | 'erase' | 'lasso' | 'shape';
   pageId: string;
   tool: DrawTool;
   style: StrokeStyle;
@@ -73,8 +74,8 @@ interface ActiveGesture {
   rectDirty: boolean;
   n: number;
   np: number;
-  /** Partial-erase masks: stroke id → per-point erased flags. */
-  masks: Map<string, Uint8Array>;
+  /** Partial erase: stroke id → its current surviving runs. */
+  erased: Map<string, number[][]>;
   lasso: number[];
   lastX: number;
   lastY: number;
@@ -95,6 +96,7 @@ export class InkEngine {
   pen: StrokeStyle = { color: 'ink/black', width: 3 };
   highlighter: StrokeStyle = { color: 'ink/amber', width: 16 };
   eraserRadius = 14;
+  shapeKind: ShapeKind = 'rect';
 
   private paint: ThemePaint = {
     dark: false,
@@ -327,8 +329,16 @@ export class InkEngine {
 
     const forcedEraser = (e.buttons & BUTTONS_ERASER) !== 0;
     const tool = forcedEraser ? 'eraser' : this.tool;
-    const kind = tool === 'eraser' ? 'erase' : tool === 'lasso' ? 'lasso' : 'draw';
-    const drawTool: DrawTool = tool === 'highlighter' ? 'highlighter' : 'pen';
+    const kind =
+      tool === 'eraser'
+        ? 'erase'
+        : tool === 'lasso'
+          ? 'lasso'
+          : tool === 'shape'
+            ? 'shape'
+            : 'draw';
+    const drawTool: DrawTool =
+      tool === 'highlighter' ? 'highlighter' : tool === 'shape' ? 'shape' : 'pen';
 
     this.active = {
       kind,
@@ -339,7 +349,7 @@ export class InkEngine {
       rectDirty: false,
       n: 0,
       np: 0,
-      masks: new Map(),
+      erased: new Map(),
       lasso: [],
       lastX: 0,
       lastY: 0,
@@ -410,13 +420,32 @@ export class InkEngine {
       };
       this.callbacks.onCommitStroke(active.pageId, stroke);
       this.bakeStroke(active.pageId, stroke);
+    } else if (!cancelled && page && active.kind === 'shape' && active.n > 0) {
+      const ax = this.pts[0];
+      const ay = this.pts[1];
+      // A near-zero drag is a misfire, not a shape.
+      if (Math.hypot(active.lastX - ax, active.lastY - ay) >= 2) {
+        const points = shapePoints(this.shapeKind, ax, ay, active.lastX, active.lastY);
+        for (let i = 0; i < points.length; i++) {
+          points[i] = Math.round(points[i] * 100) / 100;
+        }
+        const stroke: StrokeData = {
+          id: crypto.randomUUID(),
+          tool: 'shape',
+          color: active.style.color,
+          width: active.style.width,
+          points,
+        };
+        this.callbacks.onCommitStroke(active.pageId, stroke);
+        this.bakeStroke(active.pageId, stroke);
+      }
     } else if (!cancelled && active.kind === 'erase') {
-      if (page && active.masks.size > 0) {
+      if (page && active.erased.size > 0) {
         const edits: StrokeEdit[] = [];
         for (const s of page.reg.getStrokes()) {
-          const mask = active.masks.get(s.id);
-          if (!mask) continue;
-          edits.push({ before: s, after: this.segmentsFor(s, mask, true) });
+          const runs = active.erased.get(s.id);
+          if (!runs) continue;
+          edits.push({ before: s, after: this.runStrokes(s, runs, true) });
         }
         if (edits.length > 0) this.callbacks.onEraseCommit(active.pageId, edits);
       }
@@ -459,6 +488,8 @@ export class InkEngine {
     if (!active) return;
     const x = this.toPageX(page, e.clientX);
     const y = this.toPageY(page, e.clientY);
+    const prevX = active.lastX;
+    const prevY = active.lastY;
     active.lastX = x;
     active.lastY = y;
     if (active.kind === 'draw') {
@@ -469,8 +500,31 @@ export class InkEngine {
       this.pts[k + 2] = e.pressure || 0.5;
       active.n++;
       this.stats.activePoints = active.n;
+    } else if (active.kind === 'shape') {
+      // Only the anchor is stored; the shape re-derives from anchor + last.
+      if (active.n === 0) {
+        this.pts[0] = x;
+        this.pts[1] = y;
+        this.pts[2] = e.pressure || 0.5;
+        active.n = 1;
+      }
     } else if (active.kind === 'erase') {
-      this.eraseAt(page, x, y);
+      if (active.n === 0) {
+        this.eraseAt(page, x, y);
+      } else {
+        // Sweep the gap since the previous sample so a fast-moving eraser
+        // can't hop over ink between events.
+        const dist = Math.hypot(x - prevX, y - prevY);
+        const steps = Math.max(1, Math.ceil(dist / Math.max(1, this.eraserRadius * 0.5)));
+        for (let i = 1; i <= steps; i++) {
+          this.eraseAt(
+            page,
+            prevX + ((x - prevX) * i) / steps,
+            prevY + ((y - prevY) * i) / steps,
+          );
+        }
+      }
+      active.n++;
     } else {
       const len = active.lasso.length;
       if (
@@ -482,8 +536,8 @@ export class InkEngine {
     }
   }
 
-  /** Partial erase: mask the points under the eraser and preview the stroke
-   *  as its surviving runs. The doc changes only on pointerup (one command). */
+  /** Partial erase: clip surviving runs against the eraser disk and preview
+   *  the result. The doc changes only on pointerup (one command). */
   private eraseAt(page: InternalPage, x: number, y: number): void {
     const active = this.active;
     if (!active) return;
@@ -501,30 +555,38 @@ export class InkEngine {
       ) {
         continue;
       }
-      // Only keep a mask once it actually marks something, so untouched
+      // Only record runs once the disk actually cuts something, so untouched
       // strokes never end up in the commit.
-      let mask = active.masks.get(s.id);
-      const fresh = !mask;
-      if (!mask) mask = new Uint8Array(Math.floor(s.points.length / 3));
-      if (maskStrokeUnderCircle(s.points, mask, x, y, reach)) {
-        if (fresh) active.masks.set(s.id, mask);
-        if (!repl) {
-          repl = new Map();
-          this.replaceByPage.set(page.reg.id, repl);
+      const prev = active.erased.get(s.id) ?? [s.points];
+      let changed = false;
+      const next: number[][] = [];
+      for (const run of prev) {
+        const clipped = clipRunAgainstCircle(run, x, y, reach);
+        if (clipped) {
+          changed = true;
+          next.push(...clipped);
+        } else {
+          next.push(run);
         }
-        repl.set(s.id, this.segmentsFor(s, mask, false));
-        dirty = dirty ? rectUnion(dirty, b) : { ...b };
       }
+      if (!changed) continue;
+      active.erased.set(s.id, next);
+      if (!repl) {
+        repl = new Map();
+        this.replaceByPage.set(page.reg.id, repl);
+      }
+      repl.set(s.id, this.runStrokes(s, next, false));
+      dirty = dirty ? rectUnion(dirty, b) : { ...b };
     }
     if (dirty) {
       this.repaintPage(page.reg.id, inflateRect(dirty, 4));
     }
   }
 
-  /** Build the surviving segment strokes for a masked stroke. Preview ids are
-   *  deterministic; the committed edit gets fresh UUIDs. */
-  private segmentsFor(s: StrokeData, mask: Uint8Array, finalIds: boolean): StrokeData[] {
-    return splitPointsByMask(s.points, mask).map((points, i) => ({
+  /** Wrap surviving runs as strokes. Preview ids are deterministic; the
+   *  committed edit gets fresh UUIDs. */
+  private runStrokes(s: StrokeData, runs: number[][], finalIds: boolean): StrokeData[] {
+    return runs.map((points, i) => ({
       id: finalIds ? crypto.randomUUID() : `${s.id}~${i}`,
       tool: s.tool,
       color: s.color,
@@ -614,6 +676,35 @@ export class InkEngine {
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
       }
+    } else if (active.kind === 'shape') {
+      if (active.n > 0) {
+        const pts = shapePoints(
+          this.shapeKind,
+          this.pts[0],
+          this.pts[1],
+          active.lastX,
+          active.lastY,
+        );
+        const outline = strokeOutline(pts, Math.floor(pts.length / 3), {
+          width: active.style.width,
+          tool: 'shape',
+          tuning: this.tuning,
+        });
+        applyStrokeStyle(
+          ctx,
+          {
+            id: '',
+            tool: 'shape',
+            color: active.style.color,
+            width: active.style.width,
+            points: [],
+          },
+          this.paint,
+        );
+        ctx.fill(outlineToPath(outline));
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+      }
     } else if (active.kind === 'erase') {
       ctx.strokeStyle = this.paint.accent;
       ctx.lineWidth = 1.5 / cssPerUnit;
@@ -659,7 +750,9 @@ export {
   strokeHitsCircle,
   maskStrokeUnderCircle,
   splitPointsByMask,
+  clipRunAgainstCircle,
 } from './hittest';
+export { shapePoints } from './shapes';
 export { strokeOutline, outlineToPath, outlineToSvgPath } from './stroke';
 export {
   renderPageBitmap,
@@ -673,6 +766,7 @@ export { DEFAULT_TUNING } from './types';
 export type {
   DrawTool,
   ToolKind,
+  ShapeKind,
   TemplateKind,
   StrokeData,
   StrokeEdit,

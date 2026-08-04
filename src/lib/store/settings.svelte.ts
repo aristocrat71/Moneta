@@ -1,5 +1,5 @@
 import { ipc } from '$lib/ipc';
-import type { TemplateKind, ToolKind } from '$lib/ink/engine';
+import type { ShapeKind, TemplateKind, ToolKind } from '$lib/ink/engine';
 
 export interface IslandPos {
   x: number;
@@ -10,6 +10,7 @@ export interface SettingsData {
   theme: 'system' | 'light' | 'dark';
   island: IslandPos | null;
   tool: ToolKind;
+  shape: ShapeKind;
   penColor: string;
   penWidth: number;
   hlColor: string;
@@ -25,6 +26,7 @@ const DEFAULTS: SettingsData = {
   theme: 'system',
   island: null,
   tool: 'pen',
+  shape: 'rect',
   penColor: 'ink/black',
   penWidth: 3,
   hlColor: 'ink/amber',

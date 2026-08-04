@@ -14,6 +14,7 @@
     type Rect,
     type StrokeData,
     type TemplateKind,
+    type ToolKind,
   } from '$lib/ink/engine';
   import {
     cmdAddPage,
@@ -39,7 +40,12 @@
   import PageOverview from '$lib/ui/canvas/PageOverview.svelte';
   import SelectionOverlay from '$lib/ui/canvas/SelectionOverlay.svelte';
   import DevHud from '$lib/ui/canvas/DevHud.svelte';
-  import { HL_PRESETS, PEN_PRESETS, type ToolState } from '$lib/ui/canvas/tool-state';
+  import {
+    ERASER_PRESETS,
+    HL_PRESETS,
+    PEN_PRESETS,
+    type ToolState,
+  } from '$lib/ui/canvas/tool-state';
 
   const GUTTER = 24;
   const PAD_TOP = 56;
@@ -65,17 +71,15 @@
   const devMode = $derived(route.url.searchParams.has('dev'));
   const notebookId = route.params.id ?? '';
 
+  const KNOWN_TOOLS: ToolKind[] = ['pen', 'highlighter', 'shape', 'eraser', 'lasso'];
   const tools = $state<ToolState>({
-    tool:
-      settings.data.tool === 'eraser' || settings.data.tool === 'lasso'
-        ? settings.data.tool
-        : settings.data.tool === 'highlighter'
-          ? 'highlighter'
-          : 'pen',
+    tool: KNOWN_TOOLS.includes(settings.data.tool) ? settings.data.tool : 'pen',
+    shape: settings.data.shape,
     penColor: settings.data.penColor,
     penWidth: settings.data.penWidth,
     hlColor: settings.data.hlColor,
     hlWidth: settings.data.hlWidth,
+    eraserRadius: settings.data.eraserRadius,
   });
 
   // ————— engine —————
@@ -121,6 +125,16 @@
     engine.highlighter = { color: tools.hlColor, width: tools.hlWidth };
     settings.data.hlColor = tools.hlColor;
     settings.data.hlWidth = tools.hlWidth;
+    settings.save();
+  });
+  $effect(() => {
+    engine.shapeKind = tools.shape;
+    settings.data.shape = tools.shape;
+    settings.save();
+  });
+  $effect(() => {
+    engine.eraserRadius = tools.eraserRadius;
+    settings.data.eraserRadius = tools.eraserRadius;
     settings.save();
   });
   $effect(() => {
@@ -508,15 +522,17 @@
   // ————— keyboard —————
 
   function stepWidth(dir: number): void {
+    const eraser = tools.tool === 'eraser';
     const hl = tools.tool === 'highlighter';
-    const presets = hl ? HL_PRESETS : PEN_PRESETS;
-    const cur = hl ? tools.hlWidth : tools.penWidth;
+    const presets = eraser ? ERASER_PRESETS : hl ? HL_PRESETS : PEN_PRESETS;
+    const cur = eraser ? tools.eraserRadius : hl ? tools.hlWidth : tools.penWidth;
     let nearest = 0;
     for (let i = 1; i < presets.length; i++) {
       if (Math.abs(presets[i] - cur) < Math.abs(presets[nearest] - cur)) nearest = i;
     }
     const next = presets[Math.max(0, Math.min(presets.length - 1, nearest + dir))];
-    if (hl) tools.hlWidth = next;
+    if (eraser) tools.eraserRadius = next;
+    else if (hl) tools.hlWidth = next;
     else tools.penWidth = next;
   }
 
@@ -570,6 +586,9 @@
         break;
       case 'h':
         tools.tool = 'highlighter';
+        break;
+      case 'r':
+        tools.tool = 'shape';
         break;
       case 'e':
         tools.tool = 'eraser';

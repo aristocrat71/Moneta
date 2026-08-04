@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  clipRunAgainstCircle,
   distSqPointToSegment,
   maskStrokeUnderCircle,
   pointInPolygon,
@@ -119,6 +120,55 @@ describe('partial-erase masking', () => {
     expect(splitPointsByMask(stroke, all)).toHaveLength(0);
     const lone = new Uint8Array([1, 0, 1]);
     expect(splitPointsByMask(stroke, lone)).toHaveLength(0);
+  });
+});
+
+describe('clipRunAgainstCircle', () => {
+  test('returns null when the disk misses the run', () => {
+    expect(clipRunAgainstCircle(line(0, 0, 100, 0), 50, 30, 10)).toBeNull();
+  });
+
+  test('cuts a long sparse segment exactly at the circle boundary', () => {
+    // Two points 100 apart — the old mask erased the whole segment; the clip
+    // must leave everything outside the r=10 disk at x=50 intact.
+    const runs = clipRunAgainstCircle([0, 0, 0.5, 100, 0, 0.5], 50, 0, 10);
+    expect(runs).toHaveLength(2);
+    const [left, right] = runs!;
+    expect(left[0]).toBe(0);
+    expect(left[left.length - 3]).toBeCloseTo(40);
+    expect(right[0]).toBeCloseTo(60);
+    expect(right[right.length - 3]).toBe(100);
+  });
+
+  test('clips the tail of a run', () => {
+    const runs = clipRunAgainstCircle([0, 0, 0.5, 100, 0, 0.5], 100, 0, 10);
+    expect(runs).toHaveLength(1);
+    expect(runs![0][runs![0].length - 3]).toBeCloseTo(90);
+  });
+
+  test('erases the whole run when the disk covers it', () => {
+    expect(clipRunAgainstCircle([0, 0, 0.5, 10, 0, 0.5], 5, 0, 20)).toEqual([]);
+  });
+
+  test('dense polyline keeps points outside the disk', () => {
+    const runs = clipRunAgainstCircle(line(0, 0, 100, 0, 10), 50, 0, 12);
+    expect(runs).toHaveLength(2);
+    for (const run of runs!) {
+      for (let i = 0; i + 2 < run.length; i += 3) {
+        expect(Math.abs(run[i] - 50)).toBeGreaterThanOrEqual(12 - 1e-6);
+      }
+    }
+  });
+
+  test('single-point dot', () => {
+    expect(clipRunAgainstCircle([5, 5, 0.5], 5, 5, 2)).toEqual([]);
+    expect(clipRunAgainstCircle([5, 5, 0.5], 50, 50, 2)).toBeNull();
+  });
+
+  test('interpolates pressure at the cut points', () => {
+    const runs = clipRunAgainstCircle([0, 0, 0, 100, 0, 1], 50, 0, 10);
+    expect(runs![0][runs![0].length - 1]).toBeCloseTo(0.4);
+    expect(runs![1][2]).toBeCloseTo(0.6);
   });
 });
 

@@ -1,8 +1,9 @@
 // Framework-free types spoken by the ink engine. This module (and everything
 // in lib/ink) must never import Svelte, Tauri, or lib/doc.
 
-export type DrawTool = 'pen' | 'highlighter';
-export type ToolKind = 'pen' | 'highlighter' | 'eraser' | 'lasso';
+export type DrawTool = 'pen' | 'highlighter' | 'shape';
+export type ToolKind = 'pen' | 'highlighter' | 'shape' | 'eraser' | 'lasso';
+export type ShapeKind = 'line' | 'rect' | 'ellipse' | 'triangle';
 export type TemplateKind = 'blank' | 'ruled' | 'grid' | 'dotted';
 
 export interface StrokeData {

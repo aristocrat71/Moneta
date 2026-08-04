@@ -4,6 +4,9 @@
 import type { ShapeKind } from './types';
 
 const PRESSURE = 0.5;
+/** Sample spacing along edges, page units. perfect-freehand needs dense
+ *  points — bare corner vertices collapse its outline along long edges. */
+const STEP = 4;
 
 /** Stroke points for a shape dragged from (ax, ay) to (bx, by), page units. */
 export function shapePoints(
@@ -15,16 +18,17 @@ export function shapePoints(
 ): number[] {
   switch (kind) {
     case 'line':
-      return [ax, ay, PRESSURE, bx, by, PRESSURE];
+      return sampled([ax, ay, bx, by]);
     case 'rect':
-      return closed([ax, ay, bx, ay, bx, by, ax, by]);
+      return sampled([ax, ay, bx, ay, bx, by, ax, by, ax, ay]);
     case 'triangle': {
       // Isosceles in the drag rect: apex top-center, base along the bottom.
       const x0 = Math.min(ax, bx);
       const x1 = Math.max(ax, bx);
       const y0 = Math.min(ay, by);
       const y1 = Math.max(ay, by);
-      return closed([(x0 + x1) / 2, y0, x1, y1, x0, y1]);
+      const mid = (x0 + x1) / 2;
+      return sampled([mid, y0, x1, y1, x0, y1, mid, y0]);
     }
     case 'ellipse': {
       const cx = (ax + bx) / 2;
@@ -32,7 +36,7 @@ export function shapePoints(
       const rx = Math.abs(bx - ax) / 2;
       const ry = Math.abs(by - ay) / 2;
       // Enough segments for ~4-unit chords, bounded for tiny/huge drags.
-      const steps = Math.max(24, Math.min(128, Math.ceil((Math.PI * (rx + ry)) / 4)));
+      const steps = Math.max(24, Math.min(128, Math.ceil((Math.PI * (rx + ry)) / STEP)));
       const pts: number[] = [];
       for (let i = 0; i <= steps; i++) {
         const t = (i / steps) * Math.PI * 2;
@@ -43,10 +47,27 @@ export function shapePoints(
   }
 }
 
-/** [x, y, ...] vertices → [x, y, p] triples, looped back to the start. */
-function closed(verts: number[]): number[] {
+/** Sample a [x, y, ...] polyline every ~STEP units, keeping exact vertices. */
+function sampled(verts: number[]): number[] {
   const pts: number[] = [];
-  for (let i = 0; i + 1 < verts.length; i += 2) pts.push(verts[i], verts[i + 1], PRESSURE);
-  pts.push(verts[0], verts[1], PRESSURE);
+  let lx = NaN;
+  let ly = NaN;
+  const push = (x: number, y: number) => {
+    if (x === lx && y === ly) return; // zero-size drags collapse vertices
+    pts.push(x, y, PRESSURE);
+    lx = x;
+    ly = y;
+  };
+  for (let e = 0; e + 3 < verts.length; e += 2) {
+    const x0 = verts[e];
+    const y0 = verts[e + 1];
+    const x1 = verts[e + 2];
+    const y1 = verts[e + 3];
+    const steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / STEP));
+    for (let i = 0; i < steps; i++) {
+      push(x0 + ((x1 - x0) * i) / steps, y0 + ((y1 - y0) * i) / steps);
+    }
+  }
+  push(verts[verts.length - 2], verts[verts.length - 1]);
   return pts;
 }

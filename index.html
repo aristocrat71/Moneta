@@ -87,13 +87,13 @@
   .temple {
     position: absolute;
     top: 0; left: 0; right: 0;
-    height: min(68vh, 560px);
-    background: url('./temple-bg.jpg') center top / cover no-repeat;
+    height: min(56vw, 700px);
+    background: url('./temple-bg.jpg') center 22% / cover no-repeat;
     opacity: var(--temple-opacity);
     filter: var(--temple-filter);
     mix-blend-mode: var(--temple-blend);
-    -webkit-mask-image: radial-gradient(ellipse 115% 100% at 50% 0%, rgb(0 0 0 / 1) 40%, transparent 84%);
-    mask-image: radial-gradient(ellipse 115% 100% at 50% 0%, rgb(0 0 0 / 1) 40%, transparent 84%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%);
     pointer-events: none;
   }
 
@@ -123,7 +123,7 @@
   .theme-btn:hover { background: var(--surface-2); color: var(--text); }
 
   /* ---------- hero ---------- */
-  .hero { padding: 72px 0 40px; text-align: center; }
+  .hero { padding: 56px 0 clamp(130px, 15vw, 240px); text-align: center; }
   .hero h1 {
     font-size: clamp(28px, 6vw, 44px);
     font-weight: 700;
@@ -137,6 +137,10 @@
     max-width: 52ch;
     font-size: 14px;
     color: var(--text-muted);
+  }
+  /* lift hero text off the engraving without drawing a box around it */
+  .hero h1, .hero .sub, .dl-meta {
+    text-shadow: 0 0 10px var(--bg), 0 0 22px var(--bg), 0 0 34px var(--bg);
   }
   .cta { margin-top: 32px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
   .btn {

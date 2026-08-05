@@ -2,6 +2,8 @@
 
 > Moneta: epithet of Juno, Roman goddess of memory. An app for keeping what your hand writes.
 
+**[moneta website →](https://aristocrat71.github.io/Moneta/)**
+
 A personal, minimalist macOS handwriting app for external drawing tablets.
 Tauri 2 · Svelte 5 (runes) · TypeScript · Canvas 2D · perfect-freehand. Fully offline —
 everything lives in `~/Moneta` as plain JSON.

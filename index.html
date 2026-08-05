@@ -297,9 +297,9 @@
         tablet. Your ink, one floating island of tools, and nothing else.
       </p>
       <div class="cta reveal" style="animation-delay:.19s">
-        <div class="cmd" data-cmd="curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash">
+        <div class="cmd" data-cmd="curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash">
           <span class="prompt" aria-hidden="true">$</span>
-          <code>curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash</code>
+          <code>curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash</code>
           <button class="copy" aria-label="Copy install command" title="Copy">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           </button>
@@ -374,18 +374,44 @@
     /* copy the install command */
     var COPY_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
     var CHECK_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    // navigator.clipboard only exists in a secure context, so it's undefined
+    // over file:// — reading .writeText off it throws synchronously, which a
+    // .catch() on the promise would never see. Fall back to execCommand so a
+    // local preview copies too, and only claim success if something worked.
+    function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+      return new Promise(function (resolve, reject) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:-9999px;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        ok ? resolve() : reject(new Error('copy failed'));
+      });
+    }
+
     document.querySelectorAll('.cmd').forEach(function (el) {
       var btn = el.querySelector('.copy');
       if (!btn) return;
       btn.addEventListener('click', function () {
-        navigator.clipboard.writeText(el.dataset.cmd).then(function () {
+        copyText(el.dataset.cmd).then(function () {
           btn.classList.add('done');
           btn.innerHTML = CHECK_ICON;
           setTimeout(function () {
             btn.classList.remove('done');
             btn.innerHTML = COPY_ICON;
           }, 1600);
-        }).catch(function () {});
+        }).catch(function () {
+          // Nothing reached the clipboard — surface it instead of looking copied.
+          btn.title = 'Copy failed — select the command and copy manually';
+        });
       });
     });
 

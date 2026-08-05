@@ -4,7 +4,7 @@
 # Gatekeeper quarantine flag. Fails closed: a missing or mismatched checksum
 # aborts before anything is installed.
 #
-#   curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash
+#   curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash
 #
 # Pin a specific version with MONETA_VERSION=vX.Y.Z; otherwise the latest release
 # is used. No build toolchain required. Once installed, Moneta updates itself.
@@ -18,11 +18,17 @@ API="${API_BASE}/latest"
 say() { printf '\033[1;32m==>\033[0m %s\n' "$1"; }
 die() { printf '\033[1;31merror:\033[0m %s\n' "$1" >&2; exit 1; }
 
+# GitHub serves these hosts from several CDN IPs, and a network that blackholes
+# one (dropping SYNs rather than refusing them) leaves curl in SYN_SENT until the
+# OS connect timeout — ~75s of silence per dead address. Cap the wait so curl
+# moves on to the next IP quickly, and retry so a transient failure isn't fatal.
+CURL=(curl --connect-timeout 10 --retry 3 --retry-connrefused)
+
 [ "$(uname -s)" = "Darwin" ] || die "Moneta is macOS-only for now (got $(uname -s))."
 
 # First asset download URL whose filename matches the given regex.
 asset_url() {
-  curl -fsSL "$API" \
+  "${CURL[@]}" -fsSL "$API" \
     | grep -o '"browser_download_url": *"[^"]*"' \
     | sed 's/.*"\(https[^"]*\)"/\1/' \
     | grep -iE "$1" \
@@ -34,7 +40,7 @@ asset_url() {
 verify_sha() {
   local file="$1" url="$2" sums expected actual
   say "Verifying checksum…"
-  sums="$(curl -fsSL "${url}.sha256")" \
+  sums="$("${CURL[@]}" -fsSL "${url}.sha256")" \
     || die "no published checksum for $(basename "$url") — refusing to install"
   expected="$(printf '%s\n' "$sums" | awk '{print $1}' | head -1)"
   [ -n "$expected" ] || die "empty checksum for $(basename "$url")"
@@ -51,7 +57,7 @@ tmp="$(mktemp -d)"
 trap 'hdiutil detach "$tmp/mnt" -quiet 2>/dev/null || true; rm -rf "$tmp"' EXIT
 
 say "Downloading $(basename "$url")…"
-curl -fSL --progress-bar "$url" -o "$tmp/moneta.dmg"
+"${CURL[@]}" -fSL --progress-bar "$url" -o "$tmp/moneta.dmg"
 verify_sha "$tmp/moneta.dmg" "$url"
 
 mkdir -p "$tmp/mnt"

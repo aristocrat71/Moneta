@@ -17,7 +17,7 @@ Canonical docs: [`docs/DESIGN.md`](docs/DESIGN.md) (visual spec) ·
 macOS only, Apple Silicon or Intel:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash
+curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash
 ```
 
 The script downloads the latest release, verifies its published SHA-256, installs

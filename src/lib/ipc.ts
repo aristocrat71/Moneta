@@ -18,6 +18,8 @@ export interface ProjectData {
   name: string;
   order: number;
   collapsed?: boolean;
+  /** Absent on projects made before this was recorded — see newestProject. */
+  createdAt?: number;
 }
 
 export interface LibrarySnapshot {

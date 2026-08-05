@@ -59,7 +59,8 @@
         label: 'New notebook',
         detail: 'action',
         run: async () => {
-          const id = await library.createNotebook(null);
+          // Same rule as ⌘N: no project of its own means the newest one.
+          const id = await library.createNotebook(library.newestProject?.id ?? null);
           if (id) void goto(`/notebook/${id}`);
         },
       },

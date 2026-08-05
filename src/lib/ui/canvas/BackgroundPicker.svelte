@@ -101,7 +101,7 @@
           class:current={glass}
           role="menuitemradio"
           aria-checked={glass}
-          title="See through to whatever is behind the window"
+          title="See through to whatever is behind the window  G G"
           onclick={() => onglass(!glass)}
         >
           <span class="chip glass"></span>
@@ -132,7 +132,7 @@
         >
           <MousePointerClick size={13} strokeWidth={1.5} />
           <span>Click through</span>
-          <kbd>⌥⌘C</kbd>
+          <kbd>J J</kbd>
         </button>
       {/if}
     </div>

@@ -47,6 +47,23 @@ class LibraryStore {
     return [...this.notebooks].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, 5);
   }
 
+  /** The project a notebook started without a home belongs in. `order` is only
+   *  ever assigned at creation (and never reshuffled), so the highest one is
+   *  the newest project; `createdAt` decides once it exists on both. */
+  get newestProject(): ProjectData | null {
+    let newest: ProjectData | null = null;
+    for (const p of this.projects) {
+      if (!newest) {
+        newest = p;
+        continue;
+      }
+      const a = p.createdAt ?? 0;
+      const b = newest.createdAt ?? 0;
+      if (a > b || (a === b && p.order > newest.order)) newest = p;
+    }
+    return newest;
+  }
+
   projectName(id: string | null): string | null {
     if (id === null) return null;
     return this.projects.find((p) => p.id === id)?.name ?? null;
@@ -86,6 +103,7 @@ class LibraryStore {
       name,
       order: this.projects.length,
       collapsed: false,
+      createdAt: Date.now(),
     };
     this.projects.push(project);
     await this.saveProjects();

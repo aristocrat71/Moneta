@@ -30,6 +30,8 @@
     if (ready) document.documentElement.dataset.theme = theme.resolved;
   });
 
+  // ⌘/ belongs to ShortcutsSheet, which each screen mounts itself. Settings is
+  // handled here because the sheet it opens is mounted here too.
   function onKeydown(e: KeyboardEvent) {
     if ((e.metaKey || e.ctrlKey) && e.key === ',') {
       e.preventDefault();

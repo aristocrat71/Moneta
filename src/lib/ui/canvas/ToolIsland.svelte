@@ -57,11 +57,11 @@
   const resolvedColor = $derived(resolveInk(activeColor, theme.dark));
 
   const toolButtons: { tool: ToolKind; icon: typeof Pen; label: string; key: string }[] = [
-    { tool: 'pen', icon: Pen, label: 'Pen', key: 'P' },
-    { tool: 'shape', icon: Square, label: 'Shapes', key: 'R' },
-    { tool: 'eraser', icon: Eraser, label: 'Eraser', key: 'E' },
-    { tool: 'highlighter', icon: Highlighter, label: 'Highlighter', key: 'H' },
-    { tool: 'lasso', icon: Lasso, label: 'Lasso', key: 'S' },
+    { tool: 'pen', icon: Pen, label: 'Pen', key: '1' },
+    { tool: 'shape', icon: Square, label: 'Shapes', key: '2' },
+    { tool: 'eraser', icon: Eraser, label: 'Eraser', key: '3' },
+    { tool: 'highlighter', icon: Highlighter, label: 'Highlighter', key: '4' },
+    { tool: 'lasso', icon: Lasso, label: 'Lasso', key: '5' },
   ];
 
   const SHAPE_OPTIONS: { kind: ShapeKind; icon: typeof Square; label: string }[] = [
@@ -242,11 +242,11 @@
       {:else if popover === 'shape'}
         <div class="popover shape-pop">
           <div class="shape-row">
-            {#each SHAPE_OPTIONS as opt (opt.kind)}
+            {#each SHAPE_OPTIONS as opt, i (opt.kind)}
               <button
                 class="preset"
                 class:active={tools.shape === opt.kind}
-                title={opt.label}
+                title={`${opt.label}  2 ${i + 1}`}
                 aria-label={opt.label}
                 onclick={() => {
                   tools.shape = opt.kind;
@@ -311,7 +311,7 @@
 
   <button
     class="tool"
-    title="Ink color  1–9"
+    title="Ink color"
     aria-label="Ink color"
     onclick={(e) => togglePopover('color', e.currentTarget)}
   >
@@ -319,7 +319,7 @@
   </button>
   <button
     class="tool width-btn"
-    title={isEraser ? 'Eraser size  [ ]' : 'Stroke width  [ ]'}
+    title={isEraser ? 'Eraser size' : 'Stroke width'}
     aria-label={isEraser ? 'Eraser size' : 'Stroke width'}
     onclick={(e) => togglePopover('width', e.currentTarget)}
   >

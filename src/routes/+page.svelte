@@ -18,6 +18,8 @@
   import ProjectRow from '$lib/ui/ProjectRow.svelte';
   import ProjectSection from '$lib/ui/ProjectSection.svelte';
   import { preview } from '$lib/ui/preview.svelte';
+  import ShortcutsSheet from '$lib/ui/ShortcutsSheet.svelte';
+  import { LIBRARY_SHORTCUTS } from '$lib/ui/shortcuts';
   import type { MenuItem } from '$lib/ui/menu';
 
   let newMenuOpen = $state(false);
@@ -164,8 +166,11 @@
     rows.some((r) => r.key === cursorKey) ? cursorKey : (rows[0]?.key ?? null),
   );
 
+  /** ⌘N and + → New notebook both land here. A notebook made from the header
+   *  has no project of its own to go to, so it joins the newest one rather
+   *  than falling into Unfiled — that project is what you're working in. */
   async function createNotebook() {
-    const id = await library.createNotebook(null);
+    const id = await library.createNotebook(library.newestProject?.id ?? null);
     if (id) void goto(`/notebook/${id}`);
   }
 
@@ -368,6 +373,7 @@
 </div>
 
 <NotebookPreview />
+<ShortcutsSheet title="Keyboard shortcuts" groups={LIBRARY_SHORTCUTS} />
 
 <style>
   .library {

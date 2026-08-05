@@ -3,19 +3,10 @@
   // Two shapes, one library: a dense tree (ink one hover away) or the thumbnail
   // grid (ink always on show). The header toggle picks; the choice persists.
   import { goto } from '$app/navigation';
-  import {
-    Contrast,
-    FolderPlus,
-    LayoutGrid,
-    ListTree,
-    Plus,
-    Settings,
-    SquarePen,
-  } from '@lucide/svelte';
+  import { FolderPlus, LayoutGrid, ListTree, Plus, Settings, SquarePen } from '@lucide/svelte';
   import type { NotebookMeta, ProjectData } from '$lib/ipc';
   import { library } from '$lib/store/library.svelte';
   import { settings } from '$lib/store/settings.svelte';
-  import { theme } from '$lib/store/theme.svelte';
   import { ui } from '$lib/store/ui.svelte';
   import Menu from '$lib/ui/Menu.svelte';
   import { beginWindowDrag } from '$lib/ui/window-drag';
@@ -278,14 +269,6 @@
         onclick={() => (ui.settingsOpen = true)}
       >
         <Settings size={16} strokeWidth={1.5} />
-      </button>
-      <button
-        class="icon-btn"
-        title="Theme"
-        aria-label="Toggle theme"
-        onclick={() => theme.toggle()}
-      >
-        <Contrast size={16} strokeWidth={1.5} />
       </button>
       <div class="menu-anchor">
         <button

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { getCurrentWindow } from '@tauri-apps/api/window';
-  import { ArrowLeft, LayoutGrid, Maximize2, Minimize2 } from '@lucide/svelte';
+  import { ArrowLeft, Maximize2, Minimize2 } from '@lucide/svelte';
   import { session } from '$lib/store/session.svelte';
   import { beginWindowDrag } from '$lib/ui/window-drag';
   import BackgroundPicker from './BackgroundPicker.svelte';
@@ -10,7 +10,6 @@
   let {
     hidden,
     dimmed = false,
-    overviewOpen = $bindable(false),
     background,
     onBackground,
     glass,
@@ -22,7 +21,6 @@
     hidden: boolean;
     /** Click-through is on: the bar stays put but nothing in it responds. */
     dimmed?: boolean;
-    overviewOpen?: boolean;
     background: TemplateKind;
     onBackground: (t: TemplateKind) => void;
     glass: boolean;
@@ -66,7 +64,14 @@
 
 <svelte:window onresize={refreshMaximized} />
 
-<header class="bar" class:hidden class:dimmed role="presentation" onmousedown={beginWindowDrag}>
+<header
+  class="bar"
+  class:hidden
+  class:dimmed
+  class:glass
+  role="presentation"
+  onmousedown={beginWindowDrag}
+>
   <button class="back" onclick={() => void goto('/')}>
     <ArrowLeft size={16} strokeWidth={1.5} />
     <span>Library</span>
@@ -122,15 +127,6 @@
       onopacity={onGlassOpacity}
       onpassthrough={onPassThrough}
     />
-    <button
-      class="overview"
-      class:active={overviewOpen}
-      title="Pages"
-      aria-label="Page overview"
-      onclick={() => (overviewOpen = !overviewOpen)}
-    >
-      <LayoutGrid size={16} strokeWidth={1.5} />
-    </button>
   </div>
 </header>
 
@@ -154,6 +150,11 @@
   /* Click-through: still there so you can read the state, but plainly inert. */
   .bar.dimmed {
     opacity: 0.5;
+  }
+  /* Over glass the page gives the chrome nothing to sit on, so the bar brings
+     its own — enough to read the controls, not enough to hide the source. */
+  .bar.glass {
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
   }
   .back {
     display: flex;
@@ -208,8 +209,7 @@
     align-items: center;
     gap: 2px;
   }
-  .fs,
-  .overview {
+  .fs {
     display: grid;
     place-items: center;
     width: 30px;
@@ -217,9 +217,7 @@
     border-radius: 6px;
     color: var(--text-muted);
   }
-  .fs:hover,
-  .overview:hover,
-  .overview.active {
+  .fs:hover {
     background: var(--surface-2);
     color: var(--text);
   }

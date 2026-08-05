@@ -39,7 +39,7 @@
   import CanvasTopBar from '$lib/ui/canvas/CanvasTopBar.svelte';
   import ToolIsland from '$lib/ui/canvas/ToolIsland.svelte';
   import PageSheet from '$lib/ui/canvas/PageSheet.svelte';
-  import PageIndicator from '$lib/ui/canvas/PageIndicator.svelte';
+  import PageControls from '$lib/ui/canvas/PageControls.svelte';
   import PageOverview from '$lib/ui/canvas/PageOverview.svelte';
   import SelectionOverlay from '$lib/ui/canvas/SelectionOverlay.svelte';
   import DevHud from '$lib/ui/canvas/DevHud.svelte';
@@ -786,7 +786,6 @@
   <CanvasTopBar
     hidden={barHidden && !passThrough}
     dimmed={passThrough}
-    bind:overviewOpen
     {background}
     onBackground={setBackground}
     {glass}
@@ -889,7 +888,7 @@
     {/if}
   </div>
 
-  <PageIndicator hidden={barHidden && !passThrough} {passThrough} />
+  <PageControls hidden={barHidden && !passThrough} {passThrough} bind:overviewOpen />
 
   <ToolIsland {tools} dimmed={passThrough} />
 

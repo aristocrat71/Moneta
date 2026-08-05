@@ -1,7 +1,6 @@
 <script lang="ts">
-  // PDF export with the pages on screen while you choose them. The preview is
-  // the export renderer at a smaller width, on light paper — what you see is
-  // the page you are about to get, not an approximation of it (DESIGN §5.6).
+  // PDF export with the pages on screen while you choose them. The preview is the
+  // export renderer itself, on light paper — the page you are about to get.
   import { ChevronLeft, ChevronRight } from '@lucide/svelte';
   import { ipc, type NotebookMeta } from '$lib/ipc';
   import { toasts } from '$lib/store/toast.svelte';
@@ -256,8 +255,7 @@
     gap: 8px;
     flex: none;
   }
-  /* The paper is the point: it keeps its own surface and shadow whichever
-     theme the library is in, because the PDF will be light either way. */
+  /* Light paper whichever theme the library is in — the PDF will be light. */
   .sheet-shadow {
     width: 240px;
     height: 340px;
@@ -316,8 +314,7 @@
     align-items: center;
     gap: 8px;
   }
-  /* No spinners: a page number is typed, and the arrows only cost width.
-     ↑/↓ still step the field for anyone who reaches for them. */
+  /* No spinners: a page number is typed. ↑/↓ still step the field. */
   .range input {
     width: 56px;
     padding: 5px 8px;

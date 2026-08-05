@@ -1,4 +1,4 @@
-// The .moneta document model (format v1). See IMPLEMENTATION_PLAN.md §2.2.
+// The .moneta document model (format v1).
 
 import type { PageSize, StrokeData, TemplateKind } from '$lib/ink/engine';
 
@@ -17,11 +17,8 @@ export interface DocPage {
   strokes: StrokeData[];
 }
 
-/**
- * Where the viewport sat when the notebook was last edited — the page, plus the
- * page-unit point resting under the viewport's top-left corner. Stored in page
- * units rather than scroll pixels so it survives a resize or a different zoom.
- */
+/** Where the viewport sat at the last edit: the page, plus the point under its
+ *  top-left corner — in page units, so it survives a resize or a new zoom. */
 export interface ViewAnchor {
   page: number;
   x: number;

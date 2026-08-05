@@ -65,7 +65,6 @@
       label: 'Export',
       icon: Download,
       children: [
-        // PDF takes the long road: pages to pick, and the ink to check first.
         { label: 'PDF…', action: () => (exportPdf = true) },
         { label: 'PNG', action: () => void runExport('png') },
         { label: 'SVG', action: () => void runExport('svg') },
@@ -104,8 +103,7 @@
       <img src={thumb} alt="" draggable="false" />
     {/if}
   </div>
-  <!-- Outside .thumb: that box clips overflow, which would cut the menu off.
-       Clicks inside the menu must never bubble into the card's open(). -->
+  <!-- Outside .thumb: that box clips overflow. Clicks must not reach open(). -->
   <div
     class="menu-anchor"
     role="presentation"

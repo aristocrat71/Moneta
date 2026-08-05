@@ -1,6 +1,5 @@
 <script lang="ts">
-  // The curated 2×6 ink grid + recents + custom color. Swatches preview in
-  // the current theme's resolved hue.
+  // The curated 2×6 ink grid + recents + custom color.
   import { INKS, resolveInk } from '$lib/ink/engine';
   import { theme } from '$lib/store/theme.svelte';
   import { settings } from '$lib/store/settings.svelte';

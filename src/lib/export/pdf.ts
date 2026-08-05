@@ -1,7 +1,5 @@
-// Minimal hand-rolled vector PDF writer. Strokes are exported as filled
-// outline polygons (the same perfect-freehand outlines the canvas renders),
-// so the PDF is resolution-independent. ASCII-only output keeps byte offsets
-// equal to string offsets.
+// Minimal hand-rolled vector PDF writer: strokes as filled outline polygons.
+// ASCII-only output keeps byte offsets equal to string offsets.
 
 import {
   DEFAULT_TUNING,

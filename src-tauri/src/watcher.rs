@@ -1,6 +1,5 @@
-//! Watches ~/Moneta so the library view stays live when files change
-//! (externally or via our own saves). Events are debounced to one
-//! `library-changed` emit per quiet period.
+//! Watches ~/Moneta so the library stays live when files change, debounced to
+//! one `library-changed` emit per quiet period.
 
 use std::sync::mpsc;
 use std::time::Duration;

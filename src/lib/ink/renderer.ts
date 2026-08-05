@@ -1,6 +1,5 @@
-// Dry-layer page rendering. Each visible page owns a PageRenderer; the canvas
-// backing store covers a "window" of the page (the whole page when it fits
-// under MAX_BACKING device px, otherwise the visible slice at high zoom).
+// Dry-layer page rendering. Each visible page owns a PageRenderer whose backing
+// store covers the whole page, or just the visible slice past MAX_BACKING.
 
 import { resolveInk } from './palette';
 import { strokeOutline, outlineToPath } from './stroke';
@@ -118,8 +117,7 @@ function drawTemplate(ctx: CanvasRenderingContext2D, args: PaintPageArgs): void 
   }
 }
 
-/** Paint (a window of) a page into a 2D context. Shared by the dry layer,
- *  thumbnails, and PNG export. */
+/** Paint (a window of) a page into a 2D context. */
 export function paintPage(ctx: CanvasRenderingContext2D, args: PaintPageArgs): void {
   const { strokes, paint, tuning, win, scale, hidden, dirty } = args;
   const makePath =

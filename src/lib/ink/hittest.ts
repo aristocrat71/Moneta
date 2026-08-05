@@ -106,11 +106,8 @@ export function strokeBounds(points: number[], width: number): Rect {
   };
 }
 
-/**
- * Mark the points of a stroke touched by an eraser circle. Works per segment
- * (both endpoints of any touched segment are marked) so a fast, sparse stroke
- * can't slip between sample points. Returns true when new points were marked.
- */
+/** Mark points touched by an eraser circle, per segment so a fast, sparse stroke
+ *  can't slip between samples. True when new points were marked. */
 export function maskStrokeUnderCircle(
   points: number[],
   mask: Uint8Array,
@@ -154,11 +151,7 @@ export function maskStrokeUnderCircle(
   return changed;
 }
 
-/**
- * Split a stroke's flat points into the surviving runs of consecutive
- * unmasked points. Runs shorter than `minRun` points are dropped (a lone
- * leftover point is debris, not ink).
- */
+/** Split into runs of consecutive unmasked points; runs under `minRun` are dropped. */
 export function splitPointsByMask(points: number[], mask: Uint8Array, minRun = 2): number[][] {
   const n = Math.floor(points.length / 3);
   const runs: number[][] = [];
@@ -175,12 +168,8 @@ export function splitPointsByMask(points: number[], mask: Uint8Array, minRun = 2
   return runs;
 }
 
-/**
- * Clip one stroke run against an eraser disk. Unlike the mask-based split,
- * segments are cut exactly where they cross the circle (with interpolated
- * pressure), so the erased hole is never larger than the disk itself.
- * Returns the surviving runs, or null when the disk doesn't touch the run.
- */
+/** Clip a run against the eraser disk, cutting segments exactly where they cross
+ *  it, so the hole is never larger than the disk. Null when the disk misses. */
 export function clipRunAgainstCircle(
   points: number[],
   cx: number,
@@ -285,10 +274,7 @@ export function inflateRect(r: Rect, m: number): Rect {
   return { x: r.x - m, y: r.y - m, w: r.w + m * 2, h: r.h + m * 2 };
 }
 
-/**
- * Lasso containment: bounds pre-check, then sampled per-point test.
- * A stroke counts as selected when ≥85% of its sampled points fall inside.
- */
+/** Lasso containment: bounds pre-check, then ≥85% of sampled points inside. */
 export function strokeInPolygon(points: number[], poly: number[], polyBox?: Rect): boolean {
   const count = Math.floor(points.length / 3);
   if (count === 0) return false;

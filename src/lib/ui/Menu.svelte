@@ -24,8 +24,7 @@
 
   const MARGIN = 12;
 
-  /** Fit the panel to the viewport: prefer downward, flip up when that side
-   *  has more room, and cap the height so every item stays reachable. */
+  /** Fit to the viewport: prefer downward, flip up for more room, cap the height. */
   function fit() {
     const anchor = el?.parentElement;
     if (!el || !anchor) return;

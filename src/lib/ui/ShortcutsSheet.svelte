@@ -1,7 +1,5 @@
 <script lang="ts">
-  // The shortcuts sheet, and optionally the small keyboard button that opens
-  // it. The canvas asks for no button — nothing floats over the page that ⌘/
-  // can't do — so there it is keyboard-only.
+  // The shortcuts sheet, and optionally the button that opens it.
   import { Keyboard, X } from '@lucide/svelte';
   import type { ShortcutGroup } from './shortcuts';
 
@@ -16,10 +14,8 @@
     launcher?: boolean;
   } = $props();
 
-  // ⌘/ is handled here rather than in the layout: each screen mounts exactly
-  // one of these, so the key that opens the sheet and the state that shows it
-  // stay in one component. Routing it through a shared store meant the layout
-  // wrote to one module instance while a page-mounted sheet read another.
+  // ⌘/ is handled here, not in the layout: each screen mounts exactly one sheet,
+  // so the key and the state it toggles stay in the same component instance.
   let open = $state(false);
 
   function onkeydown(e: KeyboardEvent) {
@@ -65,8 +61,7 @@
       </header>
 
       <div class="groups">
-        <!-- Indexed keys, not the values: a run like `2 2` or `G G` repeats the
-             same keycap, and a keyed each throws on a duplicate. -->
+        <!-- Indexed keys: a run like `2 2` repeats a keycap, and keyed each throws. -->
         {#each groups as group (group.title)}
           <section>
             <h3>{group.title}</h3>

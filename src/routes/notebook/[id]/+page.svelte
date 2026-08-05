@@ -1,5 +1,4 @@
 <script lang="ts">
-  // The canvas screen. Job: disappear (DESIGN.md §4).
   import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
   import { page as route } from '$app/state';
@@ -67,14 +66,11 @@
   let zoomFlash = $state<string | null>(null);
   let ghostMenu = $state(false);
   let background = $state<TemplateKind>('dotted');
-  /** Glass is a property of this sitting, not of the notebook: it is never
-   *  written to the file, so closing the notebook leaves the real background
-   *  behind — which is also what thumbnails and exports render. */
+  /** Glass belongs to this sitting, not the notebook — it is never written to
+   *  the file, so thumbnails and exports keep the real background. */
   let glass = $state(false);
-  /** Click-through: the window stops taking pointer events at all, so the
-   *  source behind it scrolls and clicks normally. Nothing of ours is
-   *  clickable while it lasts — Escape is the way out, and it reaches us as
-   *  long as we still hold focus (scrolling another app doesn't take it). */
+  /** The window stops taking pointer events at all, so the source behind it
+   *  scrolls and clicks normally. Escape is the way out. */
   let passThrough = $state(false);
   let selection = $state<{ pageId: string; ids: string[]; bounds: Rect } | null>(null);
 
@@ -91,8 +87,6 @@
     hlWidth: settings.data.hlWidth,
     eraserRadius: settings.data.eraserRadius,
   });
-
-  // ————— engine —————
 
   let hidingSelection = false;
 
@@ -160,8 +154,7 @@
     return () => document.documentElement.classList.remove('glass');
   });
 
-  /** Leaving the notebook — or glass — must always hand the pointer back:
-   *  a window that ignores the cursor with no way to say so is a dead app. */
+  /** Leaving the notebook — or glass — must always hand the pointer back. */
   $effect(() => {
     if (!glass && passThrough) setPassThrough(false);
   });
@@ -189,8 +182,7 @@
 
   session.onPagesChanged = (pageIds) => {
     for (const id of pageIds) {
-      // setTemplate repaints as well, and keeps the renderer's template in
-      // step with the doc when a background change (or its undo) lands.
+      // Keeps the renderer's template in step with the doc on undo/redo.
       const p = session.doc?.pages.find((page) => page.id === id);
       if (p) engine.setTemplate(id, p.template);
       else engine.repaintPage(id);
@@ -198,8 +190,6 @@
     syncBackground();
     refreshSelection();
   };
-
-  // ————— geometry —————
 
   const pageW = $derived(session.doc?.pages[0]?.size.w ?? 1240);
   const pageH = $derived(session.doc?.pages[0]?.size.h ?? 1754);
@@ -279,8 +269,6 @@
     });
   }
 
-  // ————— zoom & pan —————
-
   let rasterTimer: ReturnType<typeof setTimeout> | null = null;
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -324,8 +312,7 @@
     });
   }
 
-  /** The page-unit point under the viewport's top-left corner. Saved with every
-   *  edit (see session.captureView) and replayed by scrollToResume. */
+  /** The page-unit point under the viewport's top-left corner, saved on every edit. */
   function currentView(): ViewAnchor | null {
     const s = scroller;
     if (!s || !session.doc || pageCount === 0) return null;
@@ -340,13 +327,8 @@
     };
   }
 
-  /**
-   * Resume where the last edit happened — rotate, ink, highlight, erase, all of
-   * them park the viewport (session.captureView). Notebooks written before that
-   * existed have no anchor, so they fall back to the older heuristic: the most
-   * recent stroke on the last open page, searching back for the nearest page
-   * that has ink, so reopening lands on the writing rather than a blank sheet.
-   */
+  /** Resume where the last edit happened. Notebooks with no stored anchor fall
+   *  back to the most recent stroke on the nearest page that has ink. */
   function scrollToResume(): void {
     const s = scroller;
     const doc = session.doc;
@@ -441,8 +423,6 @@
     s.addEventListener('pointerup', up);
     s.addEventListener('pointercancel', up);
   }
-
-  // ————— selection —————
 
   function boundsOf(pageId: string, ids: string[]): Rect {
     const strokes = strokesOf(pageId, ids);
@@ -565,8 +545,6 @@
     };
   }
 
-  // ————— pages —————
-
   function appendPage(template: TemplateKind): void {
     ghostMenu = false;
     settings.data.lastTemplate = template;
@@ -579,8 +557,7 @@
     });
   }
 
-  /** The picker's checked chip. The doc is deliberately non-reactive, so this
-   *  is refreshed on page change and after every mutation (undo included). */
+  /** The picker's checked chip — refreshed by hand, since the doc isn't reactive. */
   function syncBackground(): void {
     background = session.doc?.pages[session.currentPage]?.template ?? background;
   }
@@ -591,8 +568,7 @@
     syncBackground();
   });
 
-  /** Background is a property of the notebook: every page moves together, and
-   *  new pages inherit it. One command, so ⌘Z puts the old mix back. */
+  /** Background belongs to the notebook: every page moves together, in one command. */
   function setBackground(template: TemplateKind): void {
     const doc = session.doc;
     if (!doc) return;
@@ -634,11 +610,8 @@
     }
   }
 
-  // ————— keyboard —————
-
-  /** Two-key runs: `2` then 1–4 picks the shape, `g g` glass, `j j` click
-   *  through. A lead key that isn't followed in time is simply forgotten, so a
-   *  half-typed run never leaves the keyboard in a strange mode. */
+  /** Two-key runs: `2` then 1–4 picks the shape, `g g` glass, `j j` click-through.
+   *  A lead that isn't followed in time is forgotten. */
   const CHORD_MS = 900;
   const SHAPE_KEYS: Record<string, ShapeKind> = {
     '1': 'line',
@@ -714,8 +687,7 @@
       return;
     }
     if (mod) return;
-    // A held key would otherwise walk a two-key run forward on its own. Only
-    // the bare keys are guarded — holding ⌘Z to undo a stretch still works.
+    // A held key would otherwise walk a two-key run forward on its own.
     if (e.repeat) return;
 
     // Any bare key answers the pending lead, whether or not it completes a run.
@@ -790,8 +762,6 @@
     engine.setViewportSize(s.clientWidth, s.clientHeight, dpr);
     updateVisible();
   }
-
-  // ————— lifecycle —————
 
   onMount(() => {
     dpr = window.devicePixelRatio || 1;

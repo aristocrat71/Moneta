@@ -1,6 +1,5 @@
-//! All disk access for Moneta lives here. Every write is atomic:
-//! write `<name>.tmp`, fsync, rename over the target. The webview never
-//! touches the filesystem directly.
+//! All disk access lives here. Every write is atomic: write `<name>.tmp`, fsync,
+//! rename over the target. The webview never touches the filesystem directly.
 
 use std::collections::HashMap;
 use std::fs::{self, File};

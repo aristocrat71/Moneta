@@ -1,5 +1,5 @@
 <script lang="ts">
-  // A leaf of the library tree. One line of type; the ink is a hover away.
+  // A leaf of the library tree.
   import { goto } from '$app/navigation';
   import { Copy, Download, FolderInput, MoreHorizontal, Pencil, Trash2 } from '@lucide/svelte';
   import type { NotebookMeta } from '$lib/ipc';
@@ -87,7 +87,6 @@
       label: 'Export',
       icon: Download,
       children: [
-        // PDF takes the long road: pages to pick, and the ink to check first.
         { label: 'PDF…', action: () => (exportPdf = true) },
         { label: 'PNG', action: () => void runExport('png') },
         { label: 'SVG', action: () => void runExport('svg') },

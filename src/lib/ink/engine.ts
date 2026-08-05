@@ -1,7 +1,4 @@
-// The ink engine's public surface — the only module the app imports from
-// lib/ink. Orchestrates pointer capture, the wet layer (active stroke), dry
-// page renderers, eraser hit-testing, and lasso geometry.
-//
+// The ink engine's public surface — the only module the app imports from lib/ink.
 // Latency contract: nothing between pointer events and wet-canvas paint may
 // await, invoke IPC, touch Svelte reactivity, or allocate in per-move loops.
 
@@ -128,8 +125,6 @@ export class InkEngine {
 
   constructor(private callbacks: EngineCallbacks) {}
 
-  // ————— shell wiring —————
-
   attachWet(canvas: HTMLCanvasElement): void {
     this.wetCanvas = canvas;
     this.wetCtx = canvas.getContext('2d');
@@ -176,8 +171,6 @@ export class InkEngine {
     return tool === 'highlighter' ? this.highlighter : this.pen;
   }
 
-  // ————— page lifecycle —————
-
   registerPage(reg: PageRegistration): void {
     this.unregisterPage(reg.id);
     const renderer = new PageRenderer(reg.canvas, reg.size, reg.template, this.tuning);
@@ -211,8 +204,6 @@ export class InkEngine {
     this.abortGesture();
     for (const id of [...this.pages.keys()]) this.unregisterPage(id);
   }
-
-  // ————— painting —————
 
   repaintPage(id: string, dirty?: Rect): void {
     const page = this.pages.get(id);
@@ -273,8 +264,6 @@ export class InkEngine {
     style.height = `${rect.h * cssPerUnit}px`;
   }
 
-  // ————— selection support —————
-
   setHidden(pageId: string, ids: ReadonlySet<string> | null): void {
     if (ids && ids.size > 0) {
       this.hiddenByPage.set(pageId, new Set(ids));
@@ -317,8 +306,6 @@ export class InkEngine {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.wetCanvas.width, this.wetCanvas.height);
   }
-
-  // ————— gesture handling (the hot path) —————
 
   private gestureDown(pageId: string, e: PointerEvent): boolean {
     if (this.active) return false;
@@ -734,8 +721,6 @@ export class InkEngine {
     this.stats.movesPerSec = this.moveTimes.length;
   }
 }
-
-// ————— re-exports: the engine's full public surface —————
 
 export { INKS, resolveInk, isSemanticInk } from './palette';
 export type { InkDef } from './palette';

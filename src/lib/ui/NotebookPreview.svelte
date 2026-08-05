@@ -1,5 +1,4 @@
 <script lang="ts">
-  // The peek panel for the library tree — floats beside the hovered row.
   import { library } from '$lib/store/library.svelte';
   import { theme } from '$lib/store/theme.svelte';
   import { pagesLabel, relTime } from '$lib/util/format';

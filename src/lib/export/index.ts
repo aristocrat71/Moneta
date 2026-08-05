@@ -1,5 +1,4 @@
-// Export orchestration. Files land in ~/Moneta/exports; rendering always
-// uses light-paper (DESIGN.md §5.6).
+// Export orchestration. Files land in ~/Moneta/exports, always on light paper.
 
 import { ipc } from '$lib/ipc';
 import { DEFAULT_TUNING, renderPageBitmap } from '$lib/ink/engine';
@@ -31,12 +30,8 @@ function safeName(title: string): string {
   return cleaned.length > 0 ? cleaned : 'Untitled';
 }
 
-/**
- * Returns the written path (pdf) or the export folder (png/svg). `range` is
- * inclusive and 1-based; omitting it exports the whole notebook. Pages keep
- * their own numbers in png/svg filenames — page 4 is `p4.png` whether or not
- * the export started at page 1.
- */
+/** Returns the written path (pdf) or the export folder (png/svg). `range` is
+ *  inclusive and 1-based; pages keep their own numbers in png/svg filenames. */
 export async function exportNotebook(
   doc: NotebookDoc,
   kind: ExportKind,

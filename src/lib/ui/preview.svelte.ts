@@ -1,7 +1,6 @@
 import type { NotebookMeta } from '$lib/ipc';
 
-/** Hover-to-peek for library rows: the tree stays dense, the ink stays one
- *  hover away. One panel for the whole tree — rows only say what to show. */
+/** Hover-to-peek for library rows. One panel for the whole tree. */
 
 /** Wait before the first peek so a cursor crossing the tree stays quiet. */
 const OPEN_DELAY = 220;

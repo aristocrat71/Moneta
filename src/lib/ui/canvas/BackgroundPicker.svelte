@@ -1,6 +1,5 @@
 <script lang="ts">
-  // Page background for the whole notebook. Chips, not words — a background is
-  // a thing you recognise faster than you read.
+  // Page background for the whole notebook.
   import { LayoutTemplate, MousePointerClick } from '@lucide/svelte';
   import type { TemplateKind } from '$lib/ink/engine';
 

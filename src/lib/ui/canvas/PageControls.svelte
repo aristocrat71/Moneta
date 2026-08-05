@@ -1,6 +1,5 @@
 <script lang="ts">
-  // Bottom-right cluster: where you are, how to see every page, and — when the
-  // window has handed the pointer through — the one key that takes it back.
+  // Bottom-right cluster: page position, the overview, and the click-through exit.
   import { LayoutGrid } from '@lucide/svelte';
   import { session } from '$lib/store/session.svelte';
 

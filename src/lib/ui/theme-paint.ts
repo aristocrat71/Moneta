@@ -1,6 +1,5 @@
-// Resolves the engine's paint colors from the CSS tokens, so no hex value
-// lives outside app.css. A hidden probe element scoped to [data-theme] lets
-// us read either theme's tokens regardless of the active one.
+// Resolves the engine's paint colors from the CSS tokens, so no hex lives outside
+// app.css. A hidden [data-theme] probe reads either theme, whichever is active.
 
 import type { ThemePaint } from '$lib/ink/engine';
 

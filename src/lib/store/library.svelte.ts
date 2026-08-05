@@ -47,9 +47,8 @@ class LibraryStore {
     return [...this.notebooks].sort((a, b) => b.modifiedAt - a.modifiedAt).slice(0, 5);
   }
 
-  /** The project a notebook started without a home belongs in. `order` is only
-   *  ever assigned at creation (and never reshuffled), so the highest one is
-   *  the newest project; `createdAt` decides once it exists on both. */
+  /** Where a notebook with no home goes. `order` is only assigned at creation,
+   *  so the highest is the newest; `createdAt` decides once both have it. */
   get newestProject(): ProjectData | null {
     let newest: ProjectData | null = null;
     for (const p of this.projects) {
@@ -86,8 +85,6 @@ class LibraryStore {
       .filter((n) => n.projectId === null || !ids.has(n.projectId))
       .sort((a, b) => b.modifiedAt - a.modifiedAt);
   }
-
-  // ————— projects —————
 
   private async saveProjects(): Promise<void> {
     try {
@@ -132,8 +129,6 @@ class LibraryStore {
     project.collapsed = !project.collapsed;
     void this.saveProjects();
   }
-
-  // ————— notebooks —————
 
   /** New notebooks always start on the default paper — `lastTemplate` is the
    *  sticky choice for adding pages inside a notebook, not for starting one. */

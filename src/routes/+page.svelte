@@ -1,7 +1,5 @@
 <script lang="ts">
-  // The Library — see all your ink, resume in one click (DESIGN.md §3).
-  // Two shapes, one library: a dense tree (ink one hover away) or the thumbnail
-  // grid (ink always on show). The header toggle picks; the choice persists.
+  // The Library: a dense tree or the thumbnail grid, toggled from the header.
   import { goto } from '$app/navigation';
   import { FolderPlus, LayoutGrid, ListTree, Plus, Settings, SquarePen } from '@lucide/svelte';
   import type { NotebookMeta, ProjectData } from '$lib/ipc';
@@ -166,9 +164,7 @@
     rows.some((r) => r.key === cursorKey) ? cursorKey : (rows[0]?.key ?? null),
   );
 
-  /** ⌘N and + → New notebook both land here. A notebook made from the header
-   *  has no project of its own to go to, so it joins the newest one rather
-   *  than falling into Unfiled — that project is what you're working in. */
+  /** ⌘N and + → New notebook both land here: the newest project, not Unfiled. */
   async function createNotebook() {
     const id = await library.createNotebook(library.newestProject?.id ?? null);
     if (id) void goto(`/notebook/${id}`);
@@ -252,8 +248,7 @@
 
 <div class="library">
   <header role="presentation" onmousedown={beginWindowDrag}>
-    <!-- The wordmark opens About rather than dragging the window: a control
-         can't do both, and the rest of the header is drag surface enough. -->
+    <!-- The wordmark opens About rather than dragging: a control can't do both. -->
     <button class="wordmark" title="About Moneta" onclick={() => (ui.aboutOpen = true)}>
       Moneta
     </button>

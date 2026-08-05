@@ -1,6 +1,5 @@
-// What the running bundle says about itself. Read from Tauri rather than
-// package.json so the About sheet reports the version actually installed —
-// which, after an update stages and relaunches, is the only honest source.
+// What the running bundle says about itself. Read from Tauri, not package.json,
+// so the version is the one actually installed.
 
 import { getVersion } from '@tauri-apps/api/app';
 

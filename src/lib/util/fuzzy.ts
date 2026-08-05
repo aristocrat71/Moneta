@@ -1,7 +1,4 @@
-/**
- * Tiny fuzzy matcher for ⌘K: subsequence match, scored by compactness and
- * word-start bonuses. Returns null when the query doesn't match.
- */
+/** Fuzzy matcher for ⌘K: subsequence match scored by compactness and word starts. */
 export function fuzzyScore(query: string, target: string): number | null {
   const q = query.toLowerCase();
   const t = target.toLowerCase();

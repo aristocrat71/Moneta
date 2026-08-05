@@ -1,6 +1,5 @@
 <script lang="ts">
-  // The one floating tool island (DESIGN.md §4.2). Draggable via the grip;
-  // position persists. The ink dot always carries the pen's current color.
+  // The one floating tool island. Draggable via the grip; position persists.
   import {
     Circle,
     Eraser,

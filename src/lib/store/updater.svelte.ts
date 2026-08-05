@@ -1,14 +1,6 @@
-// Auto-update against GitHub Releases. Checks once at launch, downloads and
-// stages the new build in the background, then offers a restart — an
-// unannounced relaunch in the middle of a page would be worse than waiting.
-// If the restart is declined, the staged build is what launches next time.
-//
-// Two entry points share this state: the quiet check at launch and the button
-// in Settings. They differ only in how loud they are about nothing happening —
-// a launch check that finds no update, or can't reach GitHub, says nothing.
-// A download that starts and then fails always speaks up, whoever asked: the
-// old code swallowed that case whole, which looked exactly like "updates are
-// broken" from the outside.
+// Auto-update against GitHub Releases: check, stage in the background, offer a
+// restart. The launch check stays quiet when it finds nothing; a download that
+// starts and then fails always speaks, whoever asked for it.
 
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check, type Update } from '@tauri-apps/plugin-updater';
@@ -86,8 +78,7 @@ class UpdaterStore {
         }
       });
     } catch (e) {
-      // An update exists and we failed to install it. Never silent: this is the
-      // state that reads as "auto-update doesn't work".
+      // Never silent: this is the state that reads as "auto-update doesn't work".
       this.status = 'failed';
       this.error = String(e);
       console.error('[updater] download/install failed:', e);
@@ -109,9 +100,8 @@ class UpdaterStore {
     });
   }
 
-  /** Never trade unsaved ink for an update. A failed flush has already put its
-   *  own "Couldn't save · …" toast on screen with a Retry, so stay open and let
-   *  that win — the update is staged either way. */
+  /** Never trade unsaved ink for an update — a failed flush has its own toast,
+   *  and the update is staged either way. */
   async restart(): Promise<void> {
     await session.flush();
     if (session.saveFailed) return;

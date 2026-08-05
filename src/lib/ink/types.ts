@@ -45,9 +45,8 @@ export interface ThemePaint {
   canvas: string;
   templateLine: string;
   accent: string;
-  /** How solid the paper is: 1 = normal page, 0 = ink floating on nothing.
-   *  Only the page fill and its template fade — ink always paints at full
-   *  strength. Omitted means 1, so thumbnails and exports are never see-through. */
+  /** How solid the paper is: 1 = normal page, 0 = ink on nothing. Fades the page
+   *  fill and template only — ink always paints full strength. Omitted means 1. */
   paperAlpha?: number;
 }
 
@@ -56,8 +55,7 @@ export interface StrokeStyle {
   width: number;
 }
 
-/** A partial-erase edit: one original stroke replaced by its surviving runs
- *  (empty when the whole stroke was erased). */
+/** A partial-erase edit: one stroke replaced by its surviving runs. */
 export interface StrokeEdit {
   before: StrokeData;
   after: StrokeData[];

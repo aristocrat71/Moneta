@@ -1,6 +1,5 @@
 // Outline generation: raw pressure points → perfect-freehand polygon → Path2D.
-// Stored points stay raw; outlines are always derived at render time so the
-// smoothing can improve later without corrupting old ink.
+// Stored points stay raw; outlines are derived at render time.
 
 import { getStroke } from 'perfect-freehand';
 import type { DrawTool, InkTuning } from './types';
@@ -18,11 +17,8 @@ function applyGamma(p: number, gamma: number): number {
   return Math.pow(p, gamma);
 }
 
-/**
- * Build the outline polygon for a stroke. `points` is a flat [x, y, p] array;
- * `count` is the number of triples to use (lets the wet path pass a typed
- * array head without slicing).
- */
+/** Outline polygon for a stroke: the first `count` triples of a flat [x, y, p]
+ *  array, so the wet path can pass a typed-array head without slicing. */
 export function strokeOutline(
   points: ArrayLike<number>,
   count: number,

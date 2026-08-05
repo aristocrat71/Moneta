@@ -1,6 +1,4 @@
 <script lang="ts">
-  // About Moneta — opened from the wordmark. Says what the app is and which
-  // copy of it you're running, and nothing else.
   import { base } from '$app/paths';
   import { appInfo } from '$lib/store/app.svelte';
   import { ui } from '$lib/store/ui.svelte';

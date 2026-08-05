@@ -4,8 +4,7 @@
 import type { ShapeKind } from './types';
 
 const PRESSURE = 0.5;
-/** Sample spacing along edges, page units. perfect-freehand needs dense
- *  points — bare corner vertices collapse its outline along long edges. */
+/** Sample spacing along edges, page units — perfect-freehand needs dense points. */
 const STEP = 4;
 
 /** Stroke points for a shape dragged from (ax, ay) to (bx, by), page units. */

@@ -27,7 +27,14 @@
     type ToolState,
   } from './tool-state';
 
-  let { tools }: { tools: ToolState } = $props();
+  let {
+    tools,
+    dimmed = false,
+  }: {
+    tools: ToolState;
+    /** Click-through is on: nothing here can be pressed, so it says so. */
+    dimmed?: boolean;
+  } = $props();
 
   let island = $state<HTMLDivElement | null>(null);
   let pos = $state<{ x: number; y: number } | null>(settings.data.island);
@@ -156,7 +163,7 @@
   );
 </script>
 
-<div class="island" bind:this={island} {style}>
+<div class="island" class:dimmed bind:this={island} {style}>
   {#if popover === 'color'}
     <div class="popover" class:below>
       <SwatchGrid selected={activeColor} onpick={setColor} />
@@ -304,6 +311,10 @@
     border: 1px solid var(--border);
     border-radius: 999px;
     box-shadow: var(--shadow-card);
+    transition: opacity 200ms ease-out;
+  }
+  .island.dimmed {
+    opacity: 0.5;
   }
   .grip {
     display: flex;

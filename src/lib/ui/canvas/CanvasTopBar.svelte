@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { getCurrentWindow } from '@tauri-apps/api/window';
-  import { ArrowLeft, LayoutGrid, Maximize2, Minimize2 } from '@lucide/svelte';
+  import { ArrowLeft, Maximize2, Minimize2 } from '@lucide/svelte';
   import { session } from '$lib/store/session.svelte';
   import { beginWindowDrag } from '$lib/ui/window-drag';
   import BackgroundPicker from './BackgroundPicker.svelte';
@@ -9,14 +9,25 @@
 
   let {
     hidden,
-    overviewOpen = $bindable(false),
+    dimmed = false,
     background,
     onBackground,
+    glass,
+    glassOpacity,
+    onGlass,
+    onGlassOpacity,
+    onPassThrough,
   }: {
     hidden: boolean;
-    overviewOpen?: boolean;
+    /** Click-through is on: the bar stays put but nothing in it responds. */
+    dimmed?: boolean;
     background: TemplateKind;
     onBackground: (t: TemplateKind) => void;
+    glass: boolean;
+    glassOpacity: number;
+    onGlass: (on: boolean) => void;
+    onGlassOpacity: (v: number) => void;
+    onPassThrough: () => void;
   } = $props();
 
   let renaming = $state(false);
@@ -53,7 +64,14 @@
 
 <svelte:window onresize={refreshMaximized} />
 
-<header class="bar" class:hidden role="presentation" onmousedown={beginWindowDrag}>
+<header
+  class="bar"
+  class:hidden
+  class:dimmed
+  class:glass
+  role="presentation"
+  onmousedown={beginWindowDrag}
+>
   <button class="back" onclick={() => void goto('/')}>
     <ArrowLeft size={16} strokeWidth={1.5} />
     <span>Library</span>
@@ -99,16 +117,16 @@
         <Maximize2 size={16} strokeWidth={1.5} />
       {/if}
     </button>
-    <BackgroundPicker template={background} onpick={onBackground} />
-    <button
-      class="overview"
-      class:active={overviewOpen}
-      title="Pages"
-      aria-label="Page overview"
-      onclick={() => (overviewOpen = !overviewOpen)}
-    >
-      <LayoutGrid size={16} strokeWidth={1.5} />
-    </button>
+    <BackgroundPicker
+      template={background}
+      onpick={onBackground}
+      {glass}
+      {glassOpacity}
+      passThrough={dimmed}
+      onglass={onGlass}
+      onopacity={onGlassOpacity}
+      onpassthrough={onPassThrough}
+    />
   </div>
 </header>
 
@@ -128,6 +146,15 @@
   .bar.hidden {
     opacity: 0;
     pointer-events: none;
+  }
+  /* Click-through: still there so you can read the state, but plainly inert. */
+  .bar.dimmed {
+    opacity: 0.5;
+  }
+  /* Over glass the page gives the chrome nothing to sit on, so the bar brings
+     its own — enough to read the controls, not enough to hide the source. */
+  .bar.glass {
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
   }
   .back {
     display: flex;
@@ -182,8 +209,7 @@
     align-items: center;
     gap: 2px;
   }
-  .fs,
-  .overview {
+  .fs {
     display: grid;
     place-items: center;
     width: 30px;
@@ -191,9 +217,7 @@
     border-radius: 6px;
     color: var(--text-muted);
   }
-  .fs:hover,
-  .overview:hover,
-  .overview.active {
+  .fs:hover {
     background: var(--surface-2);
     color: var(--text);
   }

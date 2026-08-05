@@ -2,7 +2,6 @@
   import { goto } from '$app/navigation';
   import { Search } from '@lucide/svelte';
   import { library } from '$lib/store/library.svelte';
-  import { settings } from '$lib/store/settings.svelte';
   import { fuzzyScore } from '$lib/util/fuzzy';
   import { pagesLabel, relTime } from '$lib/util/format';
 
@@ -60,7 +59,7 @@
         label: 'New notebook',
         detail: 'action',
         run: async () => {
-          const id = await library.createNotebook(null, settings.data.lastTemplate);
+          const id = await library.createNotebook(null);
           if (id) void goto(`/notebook/${id}`);
         },
       },

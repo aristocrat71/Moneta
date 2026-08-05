@@ -149,10 +149,16 @@ export function paintPage(ctx: CanvasRenderingContext2D, args: PaintPageArgs): v
   } else {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }
-  ctx.fillStyle = paint.canvas;
-  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-  drawTemplate(ctx, args);
+  // Paper and template fade together; at 0 the cleared canvas is left alone
+  // and whatever is behind the window shows through.
+  const paperAlpha = paint.paperAlpha ?? 1;
+  if (paperAlpha > 0) {
+    ctx.globalAlpha = paperAlpha;
+    ctx.fillStyle = paint.canvas;
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    drawTemplate(ctx, args);
+    ctx.globalAlpha = 1;
+  }
 
   ctx.setTransform(scale, 0, 0, scale, -win.x * scale, -win.y * scale);
   for (const stroke of strokes) {

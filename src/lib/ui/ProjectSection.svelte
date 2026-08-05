@@ -76,7 +76,7 @@
   }
 
   async function newNotebook() {
-    const id = await library.createNotebook(project?.id ?? null, settings.data.lastTemplate);
+    const id = await library.createNotebook(project?.id ?? null);
     if (id) void goto(`/notebook/${id}`);
   }
 

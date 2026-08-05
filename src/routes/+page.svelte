@@ -174,7 +174,7 @@
   );
 
   async function createNotebook() {
-    const id = await library.createNotebook(null, settings.data.lastTemplate);
+    const id = await library.createNotebook(null);
     if (id) void goto(`/notebook/${id}`);
   }
 

@@ -1,5 +1,5 @@
 import { ipc, type NotebookMeta, type ProjectData, type ThumbPair } from '$lib/ipc';
-import { newNotebook } from '$lib/doc/model';
+import { DEFAULT_TEMPLATE, newNotebook } from '$lib/doc/model';
 import { parseNotebook } from '$lib/doc/serialize';
 import { serializeNotebook } from '$lib/doc/serialize';
 import type { NotebookDoc } from '$lib/doc/model';
@@ -117,9 +117,11 @@ class LibraryStore {
 
   // ————— notebooks —————
 
+  /** New notebooks always start on the default paper — `lastTemplate` is the
+   *  sticky choice for adding pages inside a notebook, not for starting one. */
   async createNotebook(
     projectId: string | null,
-    template: TemplateKind,
+    template: TemplateKind = DEFAULT_TEMPLATE,
   ): Promise<string | null> {
     const doc = newNotebook({ projectId, template });
     try {

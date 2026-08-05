@@ -3,6 +3,7 @@
   import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
   import { page as route } from '$app/state';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
   import {
     InkEngine,
     INKS,
@@ -38,7 +39,7 @@
   import CanvasTopBar from '$lib/ui/canvas/CanvasTopBar.svelte';
   import ToolIsland from '$lib/ui/canvas/ToolIsland.svelte';
   import PageSheet from '$lib/ui/canvas/PageSheet.svelte';
-  import PageIndicator from '$lib/ui/canvas/PageIndicator.svelte';
+  import PageControls from '$lib/ui/canvas/PageControls.svelte';
   import PageOverview from '$lib/ui/canvas/PageOverview.svelte';
   import SelectionOverlay from '$lib/ui/canvas/SelectionOverlay.svelte';
   import DevHud from '$lib/ui/canvas/DevHud.svelte';
@@ -68,7 +69,16 @@
   let panning = $state(false);
   let zoomFlash = $state<string | null>(null);
   let ghostMenu = $state(false);
-  let background = $state<TemplateKind>('ruled');
+  let background = $state<TemplateKind>('dotted');
+  /** Glass is a property of this sitting, not of the notebook: it is never
+   *  written to the file, so closing the notebook leaves the real background
+   *  behind — which is also what thumbnails and exports render. */
+  let glass = $state(false);
+  /** Click-through: the window stops taking pointer events at all, so the
+   *  source behind it scrolls and clicks normally. Nothing of ours is
+   *  clickable while it lasts — Escape is the way out, and it reaches us as
+   *  long as we still hold focus (scrolling another app doesn't take it). */
+  let passThrough = $state(false);
   let selection = $state<{ pageId: string; ids: string[]; bounds: Rect } | null>(null);
 
   const devMode = $derived(route.url.searchParams.has('dev'));
@@ -141,8 +151,41 @@
     settings.save();
   });
   $effect(() => {
-    engine.setPaint(getThemePaint(theme.dark));
+    engine.setPaint({
+      ...getThemePaint(theme.dark),
+      paperAlpha: glass ? settings.data.glassOpacity : 1,
+    });
   });
+
+  // Glass only makes sense while the window is showing this notebook.
+  $effect(() => {
+    document.documentElement.classList.toggle('glass', glass);
+    return () => document.documentElement.classList.remove('glass');
+  });
+
+  /** Leaving the notebook — or glass — must always hand the pointer back:
+   *  a window that ignores the cursor with no way to say so is a dead app. */
+  $effect(() => {
+    if (!glass && passThrough) setPassThrough(false);
+  });
+
+  $effect(() => () => void getCurrentWindow().setIgnoreCursorEvents(false));
+
+  function setPassThrough(on: boolean): void {
+    passThrough = on;
+    if (on) barHidden = false;
+    void getCurrentWindow()
+      .setIgnoreCursorEvents(on)
+      .catch(() => {
+        passThrough = false;
+        toasts.show("Couldn't hand the pointer through · window refused");
+      });
+  }
+
+  function setGlassOpacity(v: number): void {
+    settings.data.glassOpacity = Math.min(1, Math.max(0, v));
+    settings.save();
+  }
   $effect(() => {
     engine.setTuning({ pressureGamma: settings.data.pressureGamma });
   });
@@ -589,9 +632,24 @@
   }
 
   function onKeyDown(e: KeyboardEvent): void {
+    // Before every other guard: the one key that works while the window is
+    // inert. Nothing may stand between Escape and handing the pointer back.
+    if (passThrough) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setPassThrough(false);
+      }
+      return;
+    }
     const t = e.target as HTMLElement;
     if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return;
     const mod = e.metaKey || e.ctrlKey;
+    // e.code, not e.key: Option rewrites the character on macOS (⌥C → ç).
+    if (mod && e.altKey && e.code === 'KeyC') {
+      e.preventDefault();
+      if (glass) setPassThrough(true);
+      return;
+    }
     if (mod && e.key.toLowerCase() === 'z') {
       e.preventDefault();
       if (e.shiftKey) doRedo();
@@ -726,10 +784,15 @@
 
 <div class="screen">
   <CanvasTopBar
-    hidden={barHidden}
-    bind:overviewOpen
+    hidden={barHidden && !passThrough}
+    dimmed={passThrough}
     {background}
     onBackground={setBackground}
+    {glass}
+    glassOpacity={settings.data.glassOpacity}
+    onGlass={(on) => (glass = on)}
+    onGlassOpacity={setGlassOpacity}
+    onPassThrough={() => setPassThrough(true)}
   />
 
   <div class="viewport">
@@ -757,6 +820,7 @@
                   {zoom}
                   {engine}
                   {windowFor}
+                  {glass}
                   active={i >= visFrom && i <= visTo}
                 />
               </div>
@@ -824,9 +888,9 @@
     {/if}
   </div>
 
-  <PageIndicator hidden={barHidden} />
+  <PageControls hidden={barHidden && !passThrough} {passThrough} bind:overviewOpen />
 
-  <ToolIsland {tools} />
+  <ToolIsland {tools} dimmed={passThrough} />
 
   <PageOverview
     bind:open={overviewOpen}

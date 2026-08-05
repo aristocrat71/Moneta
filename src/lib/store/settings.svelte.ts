@@ -21,6 +21,8 @@ export interface SettingsData {
   recentColors: string[];
   /** Library shape: dense tree, or the thumbnail grid. */
   libraryLayout: 'tree' | 'cards';
+  /** How solid the paper is in glass mode, 0–1. Glass itself never persists. */
+  glassOpacity: number;
   recentCollapsed: boolean;
   unfiledCollapsed: boolean;
 }
@@ -35,10 +37,11 @@ const DEFAULTS: SettingsData = {
   hlColor: 'ink/amber',
   hlWidth: 16,
   eraserRadius: 14,
-  lastTemplate: 'ruled',
+  lastTemplate: 'dotted',
   pressureGamma: 1,
   recentColors: [],
   libraryLayout: 'tree',
+  glassOpacity: 0,
   recentCollapsed: false,
   unfiledCollapsed: false,
 };

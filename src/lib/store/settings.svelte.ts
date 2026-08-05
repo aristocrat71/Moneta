@@ -19,6 +19,9 @@ export interface SettingsData {
   lastTemplate: TemplateKind;
   pressureGamma: number;
   recentColors: string[];
+  /** Library shape: dense tree, or the thumbnail grid. */
+  libraryLayout: 'tree' | 'cards';
+  recentCollapsed: boolean;
   unfiledCollapsed: boolean;
 }
 
@@ -35,6 +38,8 @@ const DEFAULTS: SettingsData = {
   lastTemplate: 'ruled',
   pressureGamma: 1,
   recentColors: [],
+  libraryLayout: 'tree',
+  recentCollapsed: false,
   unfiledCollapsed: false,
 };
 

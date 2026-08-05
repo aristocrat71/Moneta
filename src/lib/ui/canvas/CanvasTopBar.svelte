@@ -4,41 +4,45 @@
   import { ArrowLeft, LayoutGrid, Maximize2, Minimize2 } from '@lucide/svelte';
   import { session } from '$lib/store/session.svelte';
   import { beginWindowDrag } from '$lib/ui/window-drag';
+  import BackgroundPicker from './BackgroundPicker.svelte';
+  import type { TemplateKind } from '$lib/ink/engine';
 
   let {
     hidden,
     overviewOpen = $bindable(false),
+    background,
+    onBackground,
   }: {
     hidden: boolean;
     overviewOpen?: boolean;
+    background: TemplateKind;
+    onBackground: (t: TemplateKind) => void;
   } = $props();
 
   let renaming = $state(false);
   let draft = $state('');
   let input = $state<HTMLInputElement | null>(null);
-  let fullscreen = $state(false);
+  /** Zoom, not macOS full screen: the window fills the screen but stays a
+   *  window — same Space, menu bar and traffic lights still there. */
+  let maximized = $state(false);
 
   $effect(() => {
     if (renaming) input?.select();
   });
 
-  $effect(() => {
-    void getCurrentWindow()
-      .isFullscreen()
-      .then((v) => (fullscreen = v));
-  });
+  $effect(refreshMaximized);
 
-  async function toggleFullscreen() {
+  async function toggleMaximize() {
     const win = getCurrentWindow();
-    const next = !(await win.isFullscreen());
-    await win.setFullscreen(next);
-    fullscreen = next;
+    await win.toggleMaximize();
+    maximized = await win.isMaximized();
   }
 
-  function refreshFullscreen() {
+  /** The green button and a double-click on the bar change this too. */
+  function refreshMaximized() {
     void getCurrentWindow()
-      .isFullscreen()
-      .then((v) => (fullscreen = v));
+      .isMaximized()
+      .then((v) => (maximized = v));
   }
 
   function commitRename() {
@@ -47,7 +51,7 @@
   }
 </script>
 
-<svelte:window onresize={refreshFullscreen} />
+<svelte:window onresize={refreshMaximized} />
 
 <header class="bar" class:hidden role="presentation" onmousedown={beginWindowDrag}>
   <button class="back" onclick={() => void goto('/')}>
@@ -79,23 +83,23 @@
       >
         {session.title}
       </button>
-      <button
-        class="fs"
-        title={fullscreen ? 'Exit full screen' : 'Full screen'}
-        aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
-        onclick={toggleFullscreen}
-      >
-        {#if fullscreen}
-          <Minimize2 size={13} strokeWidth={1.5} />
-        {:else}
-          <Maximize2 size={13} strokeWidth={1.5} />
-        {/if}
-      </button>
     {/if}
   </div>
 
   <div class="right">
-    <span class="pages">p {session.currentPage + 1}/{session.pageCount}</span>
+    <button
+      class="fs"
+      title={maximized ? 'Restore size' : 'Fill screen'}
+      aria-label={maximized ? 'Restore size' : 'Fill screen'}
+      onclick={toggleMaximize}
+    >
+      {#if maximized}
+        <Minimize2 size={16} strokeWidth={1.5} />
+      {:else}
+        <Maximize2 size={16} strokeWidth={1.5} />
+      {/if}
+    </button>
+    <BackgroundPicker template={background} onpick={onBackground} />
     <button
       class="overview"
       class:active={overviewOpen}
@@ -172,28 +176,13 @@
   .rename:focus {
     outline: none;
   }
-  .fs {
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    color: var(--text-muted);
-  }
-  .fs:hover {
-    background: var(--surface-2);
-    color: var(--text);
-  }
   .right {
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 2px;
   }
-  .pages {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
+  .fs,
   .overview {
     display: grid;
     place-items: center;
@@ -202,6 +191,7 @@
     border-radius: 6px;
     color: var(--text-muted);
   }
+  .fs:hover,
   .overview:hover,
   .overview.active {
     background: var(--surface-2);

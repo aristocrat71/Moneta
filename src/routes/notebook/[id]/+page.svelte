@@ -24,6 +24,7 @@
     cmdEraseStrokes,
     cmdRecolorStrokes,
     cmdReorderPages,
+    cmdSetTemplate,
     cmdSplitStrokes,
     cmdTransformStrokes,
     transformPoints,
@@ -37,6 +38,7 @@
   import CanvasTopBar from '$lib/ui/canvas/CanvasTopBar.svelte';
   import ToolIsland from '$lib/ui/canvas/ToolIsland.svelte';
   import PageSheet from '$lib/ui/canvas/PageSheet.svelte';
+  import PageIndicator from '$lib/ui/canvas/PageIndicator.svelte';
   import PageOverview from '$lib/ui/canvas/PageOverview.svelte';
   import SelectionOverlay from '$lib/ui/canvas/SelectionOverlay.svelte';
   import DevHud from '$lib/ui/canvas/DevHud.svelte';
@@ -66,6 +68,7 @@
   let panning = $state(false);
   let zoomFlash = $state<string | null>(null);
   let ghostMenu = $state(false);
+  let background = $state<TemplateKind>('ruled');
   let selection = $state<{ pageId: string; ids: string[]; bounds: Rect } | null>(null);
 
   const devMode = $derived(route.url.searchParams.has('dev'));
@@ -145,7 +148,14 @@
   });
 
   session.onPagesChanged = (pageIds) => {
-    for (const id of pageIds) engine.repaintPage(id);
+    for (const id of pageIds) {
+      // setTemplate repaints as well, and keeps the renderer's template in
+      // step with the doc when a background change (or its undo) lands.
+      const p = session.doc?.pages.find((page) => page.id === id);
+      if (p) engine.setTemplate(id, p.template);
+      else engine.repaintPage(id);
+    }
+    syncBackground();
     refreshSelection();
   };
 
@@ -492,6 +502,34 @@
     });
   }
 
+  /** The picker's checked chip. The doc is deliberately non-reactive, so this
+   *  is refreshed on page change and after every mutation (undo included). */
+  function syncBackground(): void {
+    background = session.doc?.pages[session.currentPage]?.template ?? background;
+  }
+
+  $effect(() => {
+    void session.currentPage;
+    void session.rev;
+    syncBackground();
+  });
+
+  /** Background is a property of the notebook: every page moves together, and
+   *  new pages inherit it. One command, so ⌘Z puts the old mix back. */
+  function setBackground(template: TemplateKind): void {
+    const doc = session.doc;
+    if (!doc) return;
+    background = template;
+    settings.data.lastTemplate = template;
+    settings.save();
+    session.apply(
+      cmdSetTemplate(
+        doc.pages.map((p) => p.id),
+        template,
+      ),
+    );
+  }
+
   function deletePage(pageId: string): void {
     if ((session.doc?.pages.length ?? 0) <= 1) return;
     clearSelection();
@@ -687,7 +725,12 @@
 />
 
 <div class="screen">
-  <CanvasTopBar hidden={barHidden} bind:overviewOpen />
+  <CanvasTopBar
+    hidden={barHidden}
+    bind:overviewOpen
+    {background}
+    onBackground={setBackground}
+  />
 
   <div class="viewport">
     <div
@@ -780,6 +823,8 @@
       <div class="zoom-flash">{zoomFlash}</div>
     {/if}
   </div>
+
+  <PageIndicator hidden={barHidden} />
 
   <ToolIsland {tools} />
 

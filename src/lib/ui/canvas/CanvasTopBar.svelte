@@ -12,11 +12,19 @@
     overviewOpen = $bindable(false),
     background,
     onBackground,
+    glass,
+    glassOpacity,
+    onGlass,
+    onGlassOpacity,
   }: {
     hidden: boolean;
     overviewOpen?: boolean;
     background: TemplateKind;
     onBackground: (t: TemplateKind) => void;
+    glass: boolean;
+    glassOpacity: number;
+    onGlass: (on: boolean) => void;
+    onGlassOpacity: (v: number) => void;
   } = $props();
 
   let renaming = $state(false);
@@ -99,7 +107,14 @@
         <Maximize2 size={16} strokeWidth={1.5} />
       {/if}
     </button>
-    <BackgroundPicker template={background} onpick={onBackground} />
+    <BackgroundPicker
+      template={background}
+      onpick={onBackground}
+      {glass}
+      {glassOpacity}
+      onglass={onGlass}
+      onopacity={onGlassOpacity}
+    />
     <button
       class="overview"
       class:active={overviewOpen}

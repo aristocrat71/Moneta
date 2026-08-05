@@ -4,7 +4,6 @@
   import { ChevronRight, MoreHorizontal, Pencil, SquarePen, Trash2 } from '@lucide/svelte';
   import type { ProjectData } from '$lib/ipc';
   import { library } from '$lib/store/library.svelte';
-  import { settings } from '$lib/store/settings.svelte';
   import { ui } from '$lib/store/ui.svelte';
   import Menu from './Menu.svelte';
   import ConfirmSheet from './ConfirmSheet.svelte';
@@ -53,7 +52,7 @@
   });
 
   async function newNotebook() {
-    const id = await library.createNotebook(project?.id ?? null, settings.data.lastTemplate);
+    const id = await library.createNotebook(project?.id ?? null);
     if (id) void goto(`/notebook/${id}`);
   }
 

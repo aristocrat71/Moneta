@@ -9,6 +9,7 @@
     active,
     engine,
     windowFor,
+    glass = false,
   }: {
     page: DocPage;
     index: number;
@@ -16,6 +17,9 @@
     active: boolean;
     engine: InkEngine;
     windowFor: (index: number, page: DocPage) => PageWindow;
+    /** See-through mode: the sheet keeps only its outline, and the paper such
+     *  as it is comes from the canvas itself (ThemePaint.paperAlpha). */
+    glass?: boolean;
   } = $props();
 
   let el = $state<HTMLDivElement | null>(null);
@@ -38,6 +42,7 @@
 
 <div
   class="sheet"
+  class:glass
   bind:this={el}
   style:width={`${page.size.w * zoom}px`}
   style:height={`${page.size.h * zoom}px`}
@@ -59,6 +64,11 @@
     overflow: hidden;
     touch-action: none;
     cursor: crosshair;
+  }
+  /* Only the outline survives — it's the one cue for where the page ends. */
+  .sheet.glass {
+    background: transparent;
+    box-shadow: 0 0 0 1px var(--border);
   }
   canvas {
     position: absolute;

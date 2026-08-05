@@ -68,7 +68,11 @@
   let panning = $state(false);
   let zoomFlash = $state<string | null>(null);
   let ghostMenu = $state(false);
-  let background = $state<TemplateKind>('ruled');
+  let background = $state<TemplateKind>('dotted');
+  /** Glass is a property of this sitting, not of the notebook: it is never
+   *  written to the file, so closing the notebook leaves the real background
+   *  behind — which is also what thumbnails and exports render. */
+  let glass = $state(false);
   let selection = $state<{ pageId: string; ids: string[]; bounds: Rect } | null>(null);
 
   const devMode = $derived(route.url.searchParams.has('dev'));
@@ -141,8 +145,22 @@
     settings.save();
   });
   $effect(() => {
-    engine.setPaint(getThemePaint(theme.dark));
+    engine.setPaint({
+      ...getThemePaint(theme.dark),
+      paperAlpha: glass ? settings.data.glassOpacity : 1,
+    });
   });
+
+  // Glass only makes sense while the window is showing this notebook.
+  $effect(() => {
+    document.documentElement.classList.toggle('glass', glass);
+    return () => document.documentElement.classList.remove('glass');
+  });
+
+  function setGlassOpacity(v: number): void {
+    settings.data.glassOpacity = Math.min(1, Math.max(0, v));
+    settings.save();
+  }
   $effect(() => {
     engine.setTuning({ pressureGamma: settings.data.pressureGamma });
   });
@@ -730,6 +748,10 @@
     bind:overviewOpen
     {background}
     onBackground={setBackground}
+    {glass}
+    glassOpacity={settings.data.glassOpacity}
+    onGlass={(on) => (glass = on)}
+    onGlassOpacity={setGlassOpacity}
   />
 
   <div class="viewport">
@@ -757,6 +779,7 @@
                   {zoom}
                   {engine}
                   {windowFor}
+                  {glass}
                   active={i >= visFrom && i <= visTo}
                 />
               </div>

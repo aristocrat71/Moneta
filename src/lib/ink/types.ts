@@ -45,6 +45,10 @@ export interface ThemePaint {
   canvas: string;
   templateLine: string;
   accent: string;
+  /** How solid the paper is: 1 = normal page, 0 = ink floating on nothing.
+   *  Only the page fill and its template fade — ink always paints at full
+   *  strength. Omitted means 1, so thumbnails and exports are never see-through. */
+  paperAlpha?: number;
 }
 
 export interface StrokeStyle {

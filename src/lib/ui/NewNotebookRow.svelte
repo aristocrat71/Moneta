@@ -3,7 +3,6 @@
   import { goto } from '$app/navigation';
   import { Plus } from '@lucide/svelte';
   import { library } from '$lib/store/library.svelte';
-  import { settings } from '$lib/store/settings.svelte';
   import { preview } from './preview.svelte';
 
   let {
@@ -22,7 +21,7 @@
 
   async function create() {
     preview.close();
-    const id = await library.createNotebook(projectId, settings.data.lastTemplate);
+    const id = await library.createNotebook(projectId);
     if (id) void goto(`/notebook/${id}`);
   }
 </script>

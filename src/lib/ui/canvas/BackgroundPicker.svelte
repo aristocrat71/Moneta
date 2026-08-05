@@ -7,9 +7,19 @@
   let {
     template,
     onpick,
+    glass,
+    glassOpacity,
+    onglass,
+    onopacity,
   }: {
     template: TemplateKind;
     onpick: (t: TemplateKind) => void;
+    /** Glass lives for as long as the notebook is open — it is never stored,
+     *  so the page keeps its real background underneath. */
+    glass: boolean;
+    glassOpacity: number;
+    onglass: (on: boolean) => void;
+    onopacity: (v: number) => void;
   } = $props();
 
   const TEMPLATES: { kind: TemplateKind; label: string }[] = [
@@ -43,6 +53,7 @@
 
   function pick(kind: TemplateKind) {
     open = false;
+    if (glass) onglass(false);
     if (kind !== template) onpick(kind);
   }
 </script>
@@ -61,18 +72,47 @@
 
   {#if open}
     <div class="panel" role="menu" aria-label="Page background">
-      {#each TEMPLATES as t (t.kind)}
+      <div class="chips">
+        {#each TEMPLATES as t (t.kind)}
+          <button
+            class="option"
+            class:current={!glass && t.kind === template}
+            role="menuitemradio"
+            aria-checked={!glass && t.kind === template}
+            onclick={() => pick(t.kind)}
+          >
+            <span class="chip {t.kind}"></span>
+            <span class="label">{t.label}</span>
+          </button>
+        {/each}
+        <span class="divider"></span>
         <button
           class="option"
-          class:current={t.kind === template}
+          class:current={glass}
           role="menuitemradio"
-          aria-checked={t.kind === template}
-          onclick={() => pick(t.kind)}
+          aria-checked={glass}
+          title="See through to whatever is behind the window"
+          onclick={() => onglass(!glass)}
         >
-          <span class="chip {t.kind}"></span>
-          <span class="label">{t.label}</span>
+          <span class="chip glass"></span>
+          <span class="label">Glass</span>
         </button>
-      {/each}
+      </div>
+
+      {#if glass}
+        <label class="opacity">
+          <span>Paper</span>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={Math.round(glassOpacity * 100)}
+            oninput={(e) => onopacity(Number(e.currentTarget.value) / 100)}
+          />
+          <span class="value">{Math.round(glassOpacity * 100)}%</span>
+        </label>
+      {/if}
     </div>
   {/if}
 </div>
@@ -102,7 +142,8 @@
     right: 0;
     z-index: 50;
     display: flex;
-    gap: 4px;
+    flex-direction: column;
+    gap: 6px;
     padding: 6px;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -115,6 +156,17 @@
       opacity: 0;
       transform: translateY(8px);
     }
+  }
+  .chips {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .divider {
+    width: 1px;
+    align-self: stretch;
+    margin: 4px 2px;
+    background: var(--border);
   }
   .option {
     display: flex;
@@ -163,5 +215,36 @@
     background-image: radial-gradient(var(--template-line) 0.8px, transparent 0.9px);
     background-size: 6px 6px;
     background-position: 3px 3px;
+  }
+  /* The universal "nothing here" checkerboard. */
+  .chip.glass {
+    background:
+      conic-gradient(
+          from 90deg at 50% 50%,
+          var(--surface-2) 0 25%,
+          transparent 0 50%,
+          var(--surface-2) 0 75%,
+          transparent 0
+        )
+        0 0 / 10px 10px,
+      var(--surface);
+  }
+  .opacity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 2px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .opacity input {
+    flex: 1;
+    width: 100px;
+    accent-color: var(--accent);
+  }
+  .value {
+    width: 34px;
+    text-align: right;
   }
 </style>

@@ -7,6 +7,9 @@ export const FORMAT_VERSION = 1;
 /** Page units ≈ A4 @ 150dpi. */
 export const PAGE_SIZE: PageSize = { w: 1240, h: 1754 };
 
+/** What a new notebook is made of. Dots guide handwriting without ruling it. */
+export const DEFAULT_TEMPLATE: TemplateKind = 'dotted';
+
 export interface DocPage {
   id: string;
   template: TemplateKind;
@@ -49,7 +52,7 @@ export function newNotebook(args: {
     createdAt: now,
     modifiedAt: now,
     lastOpenPage: 0,
-    pages: [newPage(args.template ?? 'blank')],
+    pages: [newPage(args.template ?? DEFAULT_TEMPLATE)],
   };
 }
 

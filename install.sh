@@ -4,7 +4,7 @@
 # Gatekeeper quarantine flag. Fails closed: a missing or mismatched checksum
 # aborts before anything is installed.
 #
-#   curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/v0.1.0/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/v0.5.0/install.sh | bash
 #
 # Pin a specific version with MONETA_VERSION=vX.Y.Z; otherwise the latest release
 # is used. No build toolchain required. Once installed, Moneta updates itself.

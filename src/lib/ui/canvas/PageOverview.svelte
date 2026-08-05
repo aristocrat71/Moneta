@@ -26,6 +26,12 @@
   let dragFrom = $state<number | null>(null);
   let dragOver = $state<number | null>(null);
   let picking = $state(false);
+  let tiles = $state<(HTMLDivElement | null)[]>([]);
+
+  // Opening the sheet lands you on the page you were writing on.
+  $effect(() => {
+    if (open) tiles[session.currentPage]?.scrollIntoView({ block: 'nearest' });
+  });
 
   $effect(() => {
     void session.rev;
@@ -77,9 +83,12 @@
         {#each session.doc.pages as p, i (p.id)}
           <div
             class="tile"
+            class:current={i === session.currentPage}
             class:drop-target={dragOver === i && dragFrom !== null && dragFrom !== i}
+            bind:this={tiles[i]}
             role="button"
             tabindex="0"
+            aria-current={i === session.currentPage ? 'page' : undefined}
             draggable="true"
             ondragstart={(e) => {
               dragFrom = i;
@@ -201,6 +210,11 @@
     outline: 2px solid var(--accent);
     outline-offset: 1px;
   }
+  /* Where you are: the only accent in the sheet. */
+  .tile.current {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
   .tile img {
     width: 100%;
     height: 100%;
@@ -217,6 +231,11 @@
     border: 1px solid var(--border);
     border-radius: 4px;
     padding: 0 5px;
+  }
+  .tile.current .num {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
   }
   .del {
     position: absolute;

@@ -2,7 +2,7 @@
 // UI code never mutates the document directly.
 
 import type { DocPage, NotebookDoc } from './model';
-import type { Mat, StrokeData, StrokeEdit } from '$lib/ink/engine';
+import type { Mat, StrokeData, StrokeEdit, TemplateKind } from '$lib/ink/engine';
 
 export interface Command {
   label: string;
@@ -220,6 +220,34 @@ export function cmdRecolorStrokes(pageId: string, ids: string[], color: string):
       for (const entry of saved ?? []) {
         const stroke = page.strokes.find((s) => s.id === entry.id);
         if (stroke) stroke.color = entry.color;
+      }
+    },
+  };
+}
+
+/** Page background. Templates live per page, so changing a notebook's
+ *  background is one command over its whole page list — undo puts every page
+ *  back on the template it had, mixed notebooks included. */
+export function cmdSetTemplate(pageIds: string[], template: TemplateKind): Command {
+  const idSet = new Set(pageIds);
+  let saved: { id: string; template: TemplateKind }[] | null = null;
+  return {
+    label: 'Change background',
+    pageIds: [...idSet],
+    do(doc) {
+      if (!saved) {
+        saved = doc.pages
+          .filter((p) => idSet.has(p.id))
+          .map((p) => ({ id: p.id, template: p.template }));
+      }
+      for (const page of doc.pages) {
+        if (idSet.has(page.id)) page.template = template;
+      }
+    },
+    undo(doc) {
+      for (const entry of saved ?? []) {
+        const page = doc.pages.find((p) => p.id === entry.id);
+        if (page) page.template = entry.template;
       }
     },
   };

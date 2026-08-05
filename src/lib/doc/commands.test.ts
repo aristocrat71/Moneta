@@ -7,6 +7,7 @@ import {
   cmdEraseStrokes,
   cmdRecolorStrokes,
   cmdReorderPages,
+  cmdSetTemplate,
   cmdSplitStrokes,
   cmdTransformStrokes,
   transformPoints,
@@ -128,6 +129,36 @@ describe('command inverses', () => {
     expect(doc.pages.map((p) => p.id)).toEqual([ids[0], ids[2]]);
     h.undo(doc);
     expect(doc.pages.map((p) => p.id)).toEqual(ids);
+  });
+
+  test('background change round-trips a mixed notebook', () => {
+    const doc = newNotebook({ title: 't', template: 'ruled' });
+    doc.pages.push(newPage('grid'), newPage('blank'));
+    const before = snapshot(doc);
+    const h = new History();
+    h.push(
+      doc,
+      cmdSetTemplate(
+        doc.pages.map((p) => p.id),
+        'dotted',
+      ),
+    );
+    expect(doc.pages.map((p) => p.template)).toEqual(['dotted', 'dotted', 'dotted']);
+    h.undo(doc);
+    // Every page returns to its own template, not to a single shared one.
+    expect(snapshot(doc)).toBe(before);
+    h.redo(doc);
+    expect(doc.pages.map((p) => p.template)).toEqual(['dotted', 'dotted', 'dotted']);
+  });
+
+  test('background change touches only the pages it names', () => {
+    const doc = newNotebook({ title: 't', template: 'ruled' });
+    doc.pages.push(newPage('grid'));
+    const h = new History();
+    h.push(doc, cmdSetTemplate([doc.pages[0].id], 'blank'));
+    expect(doc.pages.map((p) => p.template)).toEqual(['blank', 'grid']);
+    h.undo(doc);
+    expect(doc.pages.map((p) => p.template)).toEqual(['ruled', 'grid']);
   });
 });
 

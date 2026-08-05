@@ -4,13 +4,19 @@
   import { ArrowLeft, LayoutGrid, Maximize2, Minimize2 } from '@lucide/svelte';
   import { session } from '$lib/store/session.svelte';
   import { beginWindowDrag } from '$lib/ui/window-drag';
+  import BackgroundPicker from './BackgroundPicker.svelte';
+  import type { TemplateKind } from '$lib/ink/engine';
 
   let {
     hidden,
     overviewOpen = $bindable(false),
+    background,
+    onBackground,
   }: {
     hidden: boolean;
     overviewOpen?: boolean;
+    background: TemplateKind;
+    onBackground: (t: TemplateKind) => void;
   } = $props();
 
   let renaming = $state(false);
@@ -96,6 +102,7 @@
 
   <div class="right">
     <span class="pages">p {session.currentPage + 1}/{session.pageCount}</span>
+    <BackgroundPicker template={background} onpick={onBackground} />
     <button
       class="overview"
       class:active={overviewOpen}

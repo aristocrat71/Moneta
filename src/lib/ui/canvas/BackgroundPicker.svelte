@@ -1,7 +1,7 @@
 <script lang="ts">
   // Page background for the whole notebook. Chips, not words — a background is
   // a thing you recognise faster than you read.
-  import { LayoutTemplate } from '@lucide/svelte';
+  import { LayoutTemplate, MousePointerClick } from '@lucide/svelte';
   import type { TemplateKind } from '$lib/ink/engine';
 
   let {
@@ -9,8 +9,10 @@
     onpick,
     glass,
     glassOpacity,
+    passThrough,
     onglass,
     onopacity,
+    onpassthrough,
   }: {
     template: TemplateKind;
     onpick: (t: TemplateKind) => void;
@@ -18,8 +20,10 @@
      *  so the page keeps its real background underneath. */
     glass: boolean;
     glassOpacity: number;
+    passThrough: boolean;
     onglass: (on: boolean) => void;
     onopacity: (v: number) => void;
+    onpassthrough: () => void;
   } = $props();
 
   const TEMPLATES: { kind: TemplateKind; label: string }[] = [
@@ -31,6 +35,12 @@
 
   let open = $state(false);
   let anchor = $state<HTMLDivElement | null>(null);
+
+  // Nothing may be left hanging over the source once the pointer is gone —
+  // the panel could not be dismissed by clicking it.
+  $effect(() => {
+    if (passThrough) open = false;
+  });
 
   $effect(() => {
     if (!open) return;
@@ -112,6 +122,18 @@
           />
           <span class="value">{Math.round(glassOpacity * 100)}%</span>
         </label>
+        <button
+          class="through"
+          title="The window stops taking the pointer, so the app behind it does"
+          onclick={() => {
+            open = false;
+            onpassthrough();
+          }}
+        >
+          <MousePointerClick size={13} strokeWidth={1.5} />
+          <span>Click through</span>
+          <kbd>⌥⌘C</kbd>
+        </button>
       {/if}
     </div>
   {/if}
@@ -246,5 +268,27 @@
   .value {
     width: 34px;
     text-align: right;
+  }
+  .through {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: left;
+  }
+  .through:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .through span {
+    flex: 1;
+  }
+  kbd {
+    font: inherit;
+    font-size: 11px;
+    color: var(--text-muted);
   }
 </style>

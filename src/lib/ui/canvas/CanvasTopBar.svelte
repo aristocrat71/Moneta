@@ -9,6 +9,7 @@
 
   let {
     hidden,
+    dimmed = false,
     overviewOpen = $bindable(false),
     background,
     onBackground,
@@ -16,8 +17,11 @@
     glassOpacity,
     onGlass,
     onGlassOpacity,
+    onPassThrough,
   }: {
     hidden: boolean;
+    /** Click-through is on: the bar stays put but nothing in it responds. */
+    dimmed?: boolean;
     overviewOpen?: boolean;
     background: TemplateKind;
     onBackground: (t: TemplateKind) => void;
@@ -25,6 +29,7 @@
     glassOpacity: number;
     onGlass: (on: boolean) => void;
     onGlassOpacity: (v: number) => void;
+    onPassThrough: () => void;
   } = $props();
 
   let renaming = $state(false);
@@ -61,7 +66,7 @@
 
 <svelte:window onresize={refreshMaximized} />
 
-<header class="bar" class:hidden role="presentation" onmousedown={beginWindowDrag}>
+<header class="bar" class:hidden class:dimmed role="presentation" onmousedown={beginWindowDrag}>
   <button class="back" onclick={() => void goto('/')}>
     <ArrowLeft size={16} strokeWidth={1.5} />
     <span>Library</span>
@@ -112,8 +117,10 @@
       onpick={onBackground}
       {glass}
       {glassOpacity}
+      passThrough={dimmed}
       onglass={onGlass}
       onopacity={onGlassOpacity}
+      onpassthrough={onPassThrough}
     />
     <button
       class="overview"
@@ -143,6 +150,10 @@
   .bar.hidden {
     opacity: 0;
     pointer-events: none;
+  }
+  /* Click-through: still there so you can read the state, but plainly inert. */
+  .bar.dimmed {
+    opacity: 0.5;
   }
   .back {
     display: flex;

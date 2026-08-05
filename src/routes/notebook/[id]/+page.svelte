@@ -38,6 +38,7 @@
   import CanvasTopBar from '$lib/ui/canvas/CanvasTopBar.svelte';
   import ToolIsland from '$lib/ui/canvas/ToolIsland.svelte';
   import PageSheet from '$lib/ui/canvas/PageSheet.svelte';
+  import PageIndicator from '$lib/ui/canvas/PageIndicator.svelte';
   import PageOverview from '$lib/ui/canvas/PageOverview.svelte';
   import SelectionOverlay from '$lib/ui/canvas/SelectionOverlay.svelte';
   import DevHud from '$lib/ui/canvas/DevHud.svelte';
@@ -822,6 +823,8 @@
       <div class="zoom-flash">{zoomFlash}</div>
     {/if}
   </div>
+
+  <PageIndicator hidden={barHidden} />
 
   <ToolIsland {tools} />
 

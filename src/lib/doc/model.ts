@@ -17,6 +17,17 @@ export interface DocPage {
   strokes: StrokeData[];
 }
 
+/**
+ * Where the viewport sat when the notebook was last edited — the page, plus the
+ * page-unit point resting under the viewport's top-left corner. Stored in page
+ * units rather than scroll pixels so it survives a resize or a different zoom.
+ */
+export interface ViewAnchor {
+  page: number;
+  x: number;
+  y: number;
+}
+
 export interface NotebookDoc {
   formatVersion: number;
   id: string;
@@ -25,6 +36,8 @@ export interface NotebookDoc {
   createdAt: number;
   modifiedAt: number;
   lastOpenPage: number;
+  /** Reopening lands here — the spot of the last edit, not the top of a sheet. */
+  lastView: ViewAnchor | null;
   pages: DocPage[];
 }
 
@@ -52,6 +65,7 @@ export function newNotebook(args: {
     createdAt: now,
     modifiedAt: now,
     lastOpenPage: 0,
+    lastView: null,
     pages: [newPage(args.template ?? DEFAULT_TEMPLATE)],
   };
 }

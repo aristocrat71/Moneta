@@ -3,19 +3,10 @@
   // Two shapes, one library: a dense tree (ink one hover away) or the thumbnail
   // grid (ink always on show). The header toggle picks; the choice persists.
   import { goto } from '$app/navigation';
-  import {
-    Contrast,
-    FolderPlus,
-    LayoutGrid,
-    ListTree,
-    Plus,
-    Settings,
-    SquarePen,
-  } from '@lucide/svelte';
+  import { FolderPlus, LayoutGrid, ListTree, Plus, Settings, SquarePen } from '@lucide/svelte';
   import type { NotebookMeta, ProjectData } from '$lib/ipc';
   import { library } from '$lib/store/library.svelte';
   import { settings } from '$lib/store/settings.svelte';
-  import { theme } from '$lib/store/theme.svelte';
   import { ui } from '$lib/store/ui.svelte';
   import Menu from '$lib/ui/Menu.svelte';
   import { beginWindowDrag } from '$lib/ui/window-drag';
@@ -27,6 +18,8 @@
   import ProjectRow from '$lib/ui/ProjectRow.svelte';
   import ProjectSection from '$lib/ui/ProjectSection.svelte';
   import { preview } from '$lib/ui/preview.svelte';
+  import ShortcutsSheet from '$lib/ui/ShortcutsSheet.svelte';
+  import { LIBRARY_SHORTCUTS } from '$lib/ui/shortcuts';
   import type { MenuItem } from '$lib/ui/menu';
 
   let newMenuOpen = $state(false);
@@ -173,8 +166,11 @@
     rows.some((r) => r.key === cursorKey) ? cursorKey : (rows[0]?.key ?? null),
   );
 
+  /** ⌘N and + → New notebook both land here. A notebook made from the header
+   *  has no project of its own to go to, so it joins the newest one rather
+   *  than falling into Unfiled — that project is what you're working in. */
   async function createNotebook() {
-    const id = await library.createNotebook(null);
+    const id = await library.createNotebook(library.newestProject?.id ?? null);
     if (id) void goto(`/notebook/${id}`);
   }
 
@@ -256,7 +252,11 @@
 
 <div class="library">
   <header role="presentation" onmousedown={beginWindowDrag}>
-    <span class="wordmark" role="presentation" onmousedown={beginWindowDrag}>Moneta</span>
+    <!-- The wordmark opens About rather than dragging the window: a control
+         can't do both, and the rest of the header is drag surface enough. -->
+    <button class="wordmark" title="About Moneta" onclick={() => (ui.aboutOpen = true)}>
+      Moneta
+    </button>
     <div class="tools">
       <LibrarySearch bind:open={searchOpen} />
       <button
@@ -278,14 +278,6 @@
         onclick={() => (ui.settingsOpen = true)}
       >
         <Settings size={16} strokeWidth={1.5} />
-      </button>
-      <button
-        class="icon-btn"
-        title="Theme"
-        aria-label="Toggle theme"
-        onclick={() => theme.toggle()}
-      >
-        <Contrast size={16} strokeWidth={1.5} />
       </button>
       <div class="menu-anchor">
         <button
@@ -381,6 +373,7 @@
 </div>
 
 <NotebookPreview />
+<ShortcutsSheet title="Keyboard shortcuts" groups={LIBRARY_SHORTCUTS} />
 
 <style>
   .library {
@@ -402,8 +395,14 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    padding: 3px 8px;
+    border-radius: 6px;
     font-size: 14px;
     font-weight: 550;
+    color: var(--text);
+  }
+  .wordmark:hover {
+    background: var(--surface-2);
   }
   .tools {
     display: flex;

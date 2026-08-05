@@ -133,7 +133,7 @@
           c: -sin,
           d: cos,
           e: c.x - cos * c.x + sin * c.y,
-          f: c.y - sin * c.x + cos * c.y,
+          f: c.y - sin * c.x - cos * c.y,
         };
       }
       matrix = m;

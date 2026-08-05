@@ -5,7 +5,7 @@
 import { ipc } from '$lib/ipc';
 import { History, type Command } from '$lib/doc/commands';
 import { parseNotebook, serializeNotebook } from '$lib/doc/serialize';
-import type { NotebookDoc } from '$lib/doc/model';
+import type { NotebookDoc, ViewAnchor } from '$lib/doc/model';
 import { DEFAULT_TUNING, renderPageBitmap } from '$lib/ink/engine';
 import { getThemePaint } from '$lib/ui/theme-paint';
 import { toasts } from './toast.svelte';
@@ -31,6 +31,10 @@ class NotebookSession {
 
   /** Set by the canvas view: repaint these page ids after a mutation. */
   onPagesChanged: (pageIds: string[]) => void = () => {};
+
+  /** Set by the canvas view: where the viewport is right now. Read after every
+   *  edit so reopening the notebook lands where the last one happened. */
+  captureView: (() => ViewAnchor | null) | null = null;
 
   private dirtyDoc = false;
   private saving = false;
@@ -100,6 +104,9 @@ class NotebookSession {
   private afterMutation(cmd: Command, notify: boolean): void {
     if (!this.doc) return;
     this.doc.modifiedAt = Date.now();
+    // Every edit — ink, erase, rotate, recolour — moves the resume point.
+    const view = this.captureView?.();
+    if (view) this.doc.lastView = view;
     this.syncMeta();
     if (cmd.structural) {
       this.currentPage = Math.min(this.currentPage, this.doc.pages.length - 1);

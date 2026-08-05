@@ -19,6 +19,12 @@ class ToastStore {
     return id;
   }
 
+  /** Rewrite a toast in place — progress that ticks, not a stack that grows. */
+  update(id: number, message: string): void {
+    const toast = this.list.find((t) => t.id === id);
+    if (toast) toast.message = message;
+  }
+
   dismiss(id: number): void {
     this.list = this.list.filter((t) => t.id !== id);
   }

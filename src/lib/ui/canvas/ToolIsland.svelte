@@ -40,6 +40,10 @@
   let pos = $state<{ x: number; y: number } | null>(settings.data.island);
   let popover = $state<'color' | 'width' | 'shape' | null>(null);
   let below = $state(false);
+  /** The popover hangs off the button that opened it, not the island's middle. */
+  let popEl = $state<HTMLDivElement | null>(null);
+  let anchorX = $state(0);
+  let popLeft = $state<number | null>(null);
 
   const drawTool = $derived(tools.tool === 'highlighter' ? 'highlighter' : 'pen');
   const isEraser = $derived(tools.tool === 'eraser');
@@ -53,11 +57,11 @@
   const resolvedColor = $derived(resolveInk(activeColor, theme.dark));
 
   const toolButtons: { tool: ToolKind; icon: typeof Pen; label: string; key: string }[] = [
-    { tool: 'pen', icon: Pen, label: 'Pen', key: 'P' },
-    { tool: 'shape', icon: Square, label: 'Shapes', key: 'R' },
-    { tool: 'highlighter', icon: Highlighter, label: 'Highlighter', key: 'H' },
-    { tool: 'eraser', icon: Eraser, label: 'Eraser', key: 'E' },
-    { tool: 'lasso', icon: Lasso, label: 'Lasso', key: 'S' },
+    { tool: 'pen', icon: Pen, label: 'Pen', key: '1' },
+    { tool: 'shape', icon: Square, label: 'Shapes', key: '2' },
+    { tool: 'eraser', icon: Eraser, label: 'Eraser', key: '3' },
+    { tool: 'highlighter', icon: Highlighter, label: 'Highlighter', key: '4' },
+    { tool: 'lasso', icon: Lasso, label: 'Lasso', key: '5' },
   ];
 
   const SHAPE_OPTIONS: { kind: ShapeKind; icon: typeof Square; label: string }[] = [
@@ -83,23 +87,42 @@
     return isEraser ? Math.min(4 + preset, 22) : Math.min(4 + preset * 1.6, 22);
   }
 
-  function togglePopover(which: 'color' | 'width' | 'shape') {
+  function togglePopover(which: 'color' | 'width' | 'shape', trigger: HTMLElement) {
     if (popover === which) {
       popover = null;
       return;
     }
-    below = (island?.getBoundingClientRect().top ?? 400) < 320;
+    const host = island;
+    const ir = host?.getBoundingClientRect();
+    const br = trigger.getBoundingClientRect();
+    // Offsets are measured from the island's padding box — the origin `left: 0`
+    // resolves against for the absolutely positioned anchor.
+    anchorX = ir && host ? br.left + br.width / 2 - ir.left - host.clientLeft : 0;
+    popLeft = null;
+    below = (ir?.top ?? 400) < 320;
     popover = which;
   }
 
-  function pickTool(t: ToolKind) {
+  /** Keep the popover on screen even when its button sits near a window edge. */
+  $effect(() => {
+    const el = popEl;
+    const target = anchorX;
+    if (!el || !island) return;
+    const half = el.offsetWidth / 2;
+    const left = island.getBoundingClientRect().left + island.clientLeft;
+    const min = 8 + half - left;
+    const max = window.innerWidth - 8 - half - left;
+    popLeft = max < min ? (min + max) / 2 : Math.min(Math.max(target, min), max);
+  });
+
+  function pickTool(t: ToolKind, trigger: HTMLElement) {
     if (t === 'shape') {
       // First tap selects the tool; a tap on the active tool opens the picker.
       if (tools.tool !== 'shape') {
         tools.tool = 'shape';
-        if (popover !== 'shape') togglePopover('shape');
+        if (popover !== 'shape') togglePopover('shape', trigger);
       } else {
-        togglePopover('shape');
+        togglePopover('shape', trigger);
       }
     } else {
       tools.tool = t;
@@ -164,69 +187,78 @@
 </script>
 
 <div class="island" class:dimmed bind:this={island} {style}>
-  {#if popover === 'color'}
-    <div class="popover" class:below>
-      <SwatchGrid selected={activeColor} onpick={setColor} />
-    </div>
-  {:else if popover === 'width'}
-    <div class="popover" class:below>
-      <div class="width-presets">
-        {#each presets as preset (preset)}
-          <button
-            class="preset"
-            class:active={Math.abs(activeWidth - preset) < 0.01}
-            aria-label={`Width ${preset}`}
-            onclick={() => setWidth(preset)}
-          >
+  {#if popover}
+    <div
+      class="pop-anchor"
+      class:below
+      bind:this={popEl}
+      style:--px={`${popLeft ?? anchorX}px`}
+    >
+      {#if popover === 'color'}
+        <div class="popover">
+          <SwatchGrid selected={activeColor} onpick={setColor} />
+        </div>
+      {:else if popover === 'width'}
+        <div class="popover">
+          <div class="width-presets">
+            {#each presets as preset (preset)}
+              <button
+                class="preset"
+                class:active={Math.abs(activeWidth - preset) < 0.01}
+                aria-label={`Width ${preset}`}
+                onclick={() => setWidth(preset)}
+              >
+                <span
+                  class="preset-dot"
+                  class:hollow={isEraser}
+                  style:width={`${presetDotSize(preset)}px`}
+                  style:height={`${presetDotSize(preset)}px`}
+                  style:background={isEraser ? 'transparent' : resolvedColor}
+                ></span>
+              </button>
+            {/each}
+            <span class="width-value">{activeWidth}px</span>
+          </div>
+          <input
+            class="width-slider"
+            type="range"
+            min={isEraser ? ERASER_MIN : 1}
+            max={isEraser ? ERASER_MAX : 32}
+            step={isEraser ? 1 : 0.5}
+            value={activeWidth}
+            aria-label={isEraser ? 'Eraser size' : 'Stroke width'}
+            oninput={(e) => setWidth(Number(e.currentTarget.value))}
+          />
+          <div class="preview-well">
             <span
-              class="preset-dot"
+              class="preview-dot"
               class:hollow={isEraser}
-              style:width={`${presetDotSize(preset)}px`}
-              style:height={`${presetDotSize(preset)}px`}
+              style:width={`${isEraser ? Math.min(activeWidth * 2, 40) : activeWidth}px`}
+              style:height={`${isEraser ? Math.min(activeWidth * 2, 40) : activeWidth}px`}
               style:background={isEraser ? 'transparent' : resolvedColor}
             ></span>
-          </button>
-        {/each}
-        <span class="width-value">{activeWidth}px</span>
-      </div>
-      <input
-        class="width-slider"
-        type="range"
-        min={isEraser ? ERASER_MIN : 1}
-        max={isEraser ? ERASER_MAX : 32}
-        step={isEraser ? 1 : 0.5}
-        value={activeWidth}
-        aria-label={isEraser ? 'Eraser size' : 'Stroke width'}
-        oninput={(e) => setWidth(Number(e.currentTarget.value))}
-      />
-      <div class="preview-well">
-        <span
-          class="preview-dot"
-          class:hollow={isEraser}
-          style:width={`${isEraser ? Math.min(activeWidth * 2, 40) : activeWidth}px`}
-          style:height={`${isEraser ? Math.min(activeWidth * 2, 40) : activeWidth}px`}
-          style:background={isEraser ? 'transparent' : resolvedColor}
-        ></span>
-      </div>
-    </div>
-  {:else if popover === 'shape'}
-    <div class="popover shape-pop" class:below>
-      <div class="shape-row">
-        {#each SHAPE_OPTIONS as opt (opt.kind)}
-          <button
-            class="preset"
-            class:active={tools.shape === opt.kind}
-            title={opt.label}
-            aria-label={opt.label}
-            onclick={() => {
-              tools.shape = opt.kind;
-              popover = null;
-            }}
-          >
-            <opt.icon size={18} strokeWidth={1.5} />
-          </button>
-        {/each}
-      </div>
+          </div>
+        </div>
+      {:else if popover === 'shape'}
+        <div class="popover shape-pop">
+          <div class="shape-row">
+            {#each SHAPE_OPTIONS as opt, i (opt.kind)}
+              <button
+                class="preset"
+                class:active={tools.shape === opt.kind}
+                title={`${opt.label}  2 ${i + 1}`}
+                aria-label={opt.label}
+                onclick={() => {
+                  tools.shape = opt.kind;
+                  popover = null;
+                }}
+              >
+                <opt.icon size={18} strokeWidth={1.5} />
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -241,7 +273,7 @@
       title={`${tb.label}  ${tb.key}`}
       aria-label={tb.label}
       aria-pressed={tools.tool === tb.tool}
-      onclick={() => pickTool(tb.tool)}
+      onclick={(e) => pickTool(tb.tool, e.currentTarget)}
     >
       {#if tb.tool === 'shape'}
         <ShapeIcon size={18} strokeWidth={1.5} />
@@ -279,17 +311,17 @@
 
   <button
     class="tool"
-    title="Ink color  1–9"
+    title="Ink color"
     aria-label="Ink color"
-    onclick={() => togglePopover('color')}
+    onclick={(e) => togglePopover('color', e.currentTarget)}
   >
     <span class="ink-dot" style:background={resolvedColor}></span>
   </button>
   <button
     class="tool width-btn"
-    title={isEraser ? 'Eraser size  [ ]' : 'Stroke width  [ ]'}
+    title={isEraser ? 'Eraser size' : 'Stroke width'}
     aria-label={isEraser ? 'Eraser size' : 'Stroke width'}
-    onclick={() => togglePopover('width')}
+    onclick={(e) => togglePopover('width', e.currentTarget)}
   >
     <span
       class="ink-dot outline"
@@ -381,11 +413,19 @@
     margin: 0 4px;
     background: var(--border);
   }
-  .popover {
+  /* Centred on the button that opened it (--px), clamped to the window. */
+  .pop-anchor {
     position: absolute;
     bottom: calc(100% + 10px);
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    width: max-content;
+    transform: translateX(calc(var(--px, 0px) - 50%));
+  }
+  .pop-anchor.below {
+    bottom: auto;
+    top: calc(100% + 10px);
+  }
+  .popover {
     min-width: 200px;
     padding: 12px;
     background: var(--surface);
@@ -394,14 +434,10 @@
     box-shadow: var(--shadow-sheet);
     animation: rise 160ms ease-out;
   }
-  .popover.below {
-    bottom: auto;
-    top: calc(100% + 10px);
-  }
   @keyframes rise {
     from {
       opacity: 0;
-      transform: translate(-50%, 8px);
+      transform: translateY(8px);
     }
   }
   .width-presets {

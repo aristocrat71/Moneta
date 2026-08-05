@@ -1,6 +1,6 @@
 {
   "name": "moneta",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Minimalist handwriting notes for drawing tablets",
   "type": "module",
   "scripts": {

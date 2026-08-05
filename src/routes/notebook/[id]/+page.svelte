@@ -6,13 +6,13 @@
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import {
     InkEngine,
-    INKS,
     MAX_BACKING,
     cachedStrokeBounds,
     rectUnion,
     type Mat,
     type PageWindow,
     type Rect,
+    type ShapeKind,
     type StrokeData,
     type TemplateKind,
     type ToolKind,
@@ -30,7 +30,7 @@
     cmdTransformStrokes,
     transformPoints,
   } from '$lib/doc/commands';
-  import { newPage, type DocPage } from '$lib/doc/model';
+  import { newPage, type DocPage, type ViewAnchor } from '$lib/doc/model';
   import { session } from '$lib/store/session.svelte';
   import { settings } from '$lib/store/settings.svelte';
   import { theme } from '$lib/store/theme.svelte';
@@ -43,12 +43,9 @@
   import PageOverview from '$lib/ui/canvas/PageOverview.svelte';
   import SelectionOverlay from '$lib/ui/canvas/SelectionOverlay.svelte';
   import DevHud from '$lib/ui/canvas/DevHud.svelte';
-  import {
-    ERASER_PRESETS,
-    HL_PRESETS,
-    PEN_PRESETS,
-    type ToolState,
-  } from '$lib/ui/canvas/tool-state';
+  import ShortcutsSheet from '$lib/ui/ShortcutsSheet.svelte';
+  import { CANVAS_SHORTCUTS } from '$lib/ui/shortcuts';
+  import { type ToolState } from '$lib/ui/canvas/tool-state';
 
   const GUTTER = 24;
   const PAD_TOP = 56;
@@ -316,6 +313,10 @@
     setZoom((s.clientWidth - 96) / pageW);
   }
 
+  function clampScroll(v: number, max: number): number {
+    return Math.max(0, Math.min(v, Math.max(0, max)));
+  }
+
   function scrollToPage(i: number, smooth = true): void {
     scroller?.scrollTo({
       top: Math.max(0, pageOffset(i) - 16),
@@ -323,15 +324,48 @@
     });
   }
 
+  /** The page-unit point under the viewport's top-left corner. Saved with every
+   *  edit (see session.captureView) and replayed by scrollToResume. */
+  function currentView(): ViewAnchor | null {
+    const s = scroller;
+    if (!s || !session.doc || pageCount === 0) return null;
+    const page = Math.min(
+      Math.max(0, Math.floor((s.scrollTop - PAD_TOP) / rowH)),
+      pageCount - 1,
+    );
+    return {
+      page,
+      x: (s.scrollLeft - pageLeftIn(s.clientWidth)) / zoom,
+      y: (s.scrollTop - pageOffset(page)) / zoom,
+    };
+  }
+
   /**
-   * Resume where the ink left off: jump to the most recent stroke on the last
-   * open page (searching back for the nearest page that has ink), so reopening
-   * a long notebook lands on the writing rather than the top of the sheet.
+   * Resume where the last edit happened — rotate, ink, highlight, erase, all of
+   * them park the viewport (session.captureView). Notebooks written before that
+   * existed have no anchor, so they fall back to the older heuristic: the most
+   * recent stroke on the last open page, searching back for the nearest page
+   * that has ink, so reopening lands on the writing rather than a blank sheet.
    */
   function scrollToResume(): void {
     const s = scroller;
     const doc = session.doc;
     if (!s || !doc) return;
+
+    const view = doc.lastView;
+    if (view) {
+      const i = Math.min(Math.max(0, view.page), doc.pages.length - 1);
+      s.scrollTo({
+        top: clampScroll(pageOffset(i) + view.y * zoom, s.scrollHeight - s.clientHeight),
+        left: clampScroll(
+          pageLeftIn(s.clientWidth) + view.x * zoom,
+          s.scrollWidth - s.clientWidth,
+        ),
+        behavior: 'auto',
+      });
+      return;
+    }
+
     const start = Math.min(Math.max(0, session.currentPage), doc.pages.length - 1);
     let target = -1;
     for (let i = start; i >= 0; i--) {
@@ -602,24 +636,32 @@
 
   // ————— keyboard —————
 
-  function stepWidth(dir: number): void {
-    const eraser = tools.tool === 'eraser';
-    const hl = tools.tool === 'highlighter';
-    const presets = eraser ? ERASER_PRESETS : hl ? HL_PRESETS : PEN_PRESETS;
-    const cur = eraser ? tools.eraserRadius : hl ? tools.hlWidth : tools.penWidth;
-    let nearest = 0;
-    for (let i = 1; i < presets.length; i++) {
-      if (Math.abs(presets[i] - cur) < Math.abs(presets[nearest] - cur)) nearest = i;
-    }
-    const next = presets[Math.max(0, Math.min(presets.length - 1, nearest + dir))];
-    if (eraser) tools.eraserRadius = next;
-    else if (hl) tools.hlWidth = next;
-    else tools.penWidth = next;
+  /** Two-key runs: `2` then 1–4 picks the shape, `g g` glass, `j j` click
+   *  through. A lead key that isn't followed in time is simply forgotten, so a
+   *  half-typed run never leaves the keyboard in a strange mode. */
+  const CHORD_MS = 900;
+  const SHAPE_KEYS: Record<string, ShapeKind> = {
+    '1': 'line',
+    '2': 'rect',
+    '3': 'ellipse',
+    '4': 'triangle',
+  };
+
+  let chord: string | null = null;
+  let chordTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function startChord(key: string): void {
+    chord = key;
+    if (chordTimer) clearTimeout(chordTimer);
+    chordTimer = setTimeout(() => (chord = null), CHORD_MS);
   }
 
-  function setColorForCurrent(color: string): void {
-    if (tools.tool === 'highlighter') tools.hlColor = color;
-    else tools.penColor = color;
+  function endChord(): string | null {
+    const lead = chord;
+    chord = null;
+    if (chordTimer) clearTimeout(chordTimer);
+    chordTimer = null;
+    return lead;
   }
 
   function doUndo(): void {
@@ -632,24 +674,24 @@
   }
 
   function onKeyDown(e: KeyboardEvent): void {
-    // Before every other guard: the one key that works while the window is
-    // inert. Nothing may stand between Escape and handing the pointer back.
+    // Before every other guard: the only two keys that work while the window is
+    // inert. Nothing may stand between them and handing the pointer back.
     if (passThrough) {
+      const k = e.key.toLowerCase();
       if (e.key === 'Escape') {
         e.preventDefault();
+        endChord();
         setPassThrough(false);
+      } else if (k === 'j' && !e.repeat) {
+        e.preventDefault();
+        if (endChord() === 'j') setPassThrough(false);
+        else startChord('j');
       }
       return;
     }
     const t = e.target as HTMLElement;
     if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return;
     const mod = e.metaKey || e.ctrlKey;
-    // e.code, not e.key: Option rewrites the character on macOS (⌥C → ç).
-    if (mod && e.altKey && e.code === 'KeyC') {
-      e.preventDefault();
-      if (glass) setPassThrough(true);
-      return;
-    }
     if (mod && e.key.toLowerCase() === 'z') {
       e.preventDefault();
       if (e.shiftKey) doRedo();
@@ -672,31 +714,52 @@
       return;
     }
     if (mod) return;
-    switch (e.key) {
+    // A held key would otherwise walk a two-key run forward on its own. Only
+    // the bare keys are guarded — holding ⌘Z to undo a stretch still works.
+    if (e.repeat) return;
+
+    // Any bare key answers the pending lead, whether or not it completes a run.
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const lead = endChord();
+    if (lead === '2' && SHAPE_KEYS[key]) {
+      tools.shape = SHAPE_KEYS[key];
+      tools.tool = 'shape';
+      return;
+    }
+    if (lead === 'g' && key === 'g') {
+      glass = !glass;
+      return;
+    }
+    if (lead === 'j' && key === 'j') {
+      if (glass) setPassThrough(true);
+      return;
+    }
+
+    switch (key) {
       case ' ':
         e.preventDefault();
         spaceDown = true;
         break;
-      case 'p':
+      case '1':
         tools.tool = 'pen';
         break;
-      case 'h':
-        tools.tool = 'highlighter';
-        break;
-      case 'r':
+      // Shapes answer on the first press too — 2 alone is never a dead key.
+      case '2':
         tools.tool = 'shape';
+        startChord('2');
         break;
-      case 'e':
+      case '3':
         tools.tool = 'eraser';
         break;
-      case 's':
+      case '4':
+        tools.tool = 'highlighter';
+        break;
+      case '5':
         tools.tool = 'lasso';
         break;
-      case '[':
-        stepWidth(-1);
-        break;
-      case ']':
-        stepWidth(1);
+      case 'g':
+      case 'j':
+        startChord(key);
         break;
       case 'Escape':
         clearSelection();
@@ -710,10 +773,6 @@
           deleteSelection();
         }
         break;
-      default: {
-        const n = Number(e.key);
-        if (n >= 1 && n <= 9 && INKS[n - 1]) setColorForCurrent(INKS[n - 1].id);
-      }
     }
   }
 
@@ -736,6 +795,7 @@
 
   onMount(() => {
     dpr = window.devicePixelRatio || 1;
+    session.captureView = currentView;
     let cancelled = false;
     void (async () => {
       try {
@@ -770,6 +830,7 @@
       s?.removeEventListener('gesturechange', onGestureChange as EventListener);
       engine.destroy();
       session.onPagesChanged = () => {};
+      session.captureView = null;
       void session.close();
     };
   });
@@ -889,6 +950,9 @@
   </div>
 
   <PageControls hidden={barHidden && !passThrough} {passThrough} bind:overviewOpen />
+
+  <!-- Keyboard-only: ⌘/ opens it, nothing floats over the page. -->
+  <ShortcutsSheet title="Notebook shortcuts" groups={CANVAS_SHORTCUTS} launcher={false} />
 
   <ToolIsland {tools} dimmed={passThrough} />
 

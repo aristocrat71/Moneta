@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moneta — keep what your hand writes</title>
+<meta name="description" content="Moneta is a minimal handwriting notebook for macOS and drawing tablets. Your ink, one floating island of tools, and nothing else.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Moneta">
+<meta property="og:description" content="A minimal handwriting notebook for macOS and drawing tablets.">
+<link rel="icon" href="./static/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<script>
+  /* set theme before first paint: ?theme= overrides, then localStorage */
+  (function () {
+    var q = new URLSearchParams(location.search).get('theme');
+    var t = q || localStorage.getItem('moneta-theme');
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+  :root {
+    --bg: #F6F5F1;
+    --surface: #FFFFFF;
+    --surface-2: #EDEBE6;
+    --border: #DEDBD4;
+    --text: #1D1C1A;
+    --text-muted: #75726B;
+    --accent: #3E5C8A;
+    --accent-ink: #FFFFFF;
+    --temple-opacity: .60;
+    --temple-blend: multiply;
+    --temple-filter: none;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161719;
+      --surface: #1F2124;
+      --surface-2: #2A2D31;
+      --border: #33363B;
+      --text: #E9E7E1;
+      --text-muted: #8D8B85;
+      --accent: #8AA6D6;
+      --accent-ink: #14161A;
+      --temple-opacity: .38;
+      --temple-blend: screen;
+      --temple-filter: grayscale(1) invert(1);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161719;
+    --surface: #1F2124;
+    --surface-2: #2A2D31;
+    --border: #33363B;
+    --text: #E9E7E1;
+    --text-muted: #8D8B85;
+    --accent: #8AA6D6;
+    --accent-ink: #14161A;
+    --temple-opacity: .38;
+    --temple-blend: screen;
+    --temple-filter: grayscale(1) invert(1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; background: var(--bg); }
+  body {
+    position: relative;
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-feature-settings: "liga" 0, "zero" 1;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  .wrap { position: relative; z-index: 1; max-width: 920px; margin: 0 auto; padding: 0 24px; }
+
+  /* Temple of Juno Moneta, a whisper behind the hero */
+  .temple {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: min(68vh, 560px);
+    background: url('./temple-bg.jpg') center top / cover no-repeat;
+    opacity: var(--temple-opacity);
+    filter: var(--temple-filter);
+    mix-blend-mode: var(--temple-blend);
+    -webkit-mask-image: radial-gradient(ellipse 115% 100% at 50% 0%, rgb(0 0 0 / 1) 40%, transparent 84%);
+    mask-image: radial-gradient(ellipse 115% 100% at 50% 0%, rgb(0 0 0 / 1) 40%, transparent 84%);
+    pointer-events: none;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .wordmark { font-weight: 600; font-size: 15px; text-decoration: none; }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+  .topbar-right .ver { font-size: 12px; color: var(--text-muted); }
+  .topbar-right a.gh {
+    font-size: 12px; color: var(--text-muted); text-decoration: none;
+    padding: 5px 8px; border-radius: 6px;
+    transition: background-color .12s ease, color .12s ease;
+  }
+  .topbar-right a.gh:hover { background: var(--surface-2); color: var(--text); }
+  .theme-btn {
+    width: 30px; height: 30px; border: none; border-radius: 6px;
+    background: transparent; color: var(--text-muted); cursor: pointer;
+    display: grid; place-items: center; font: inherit;
+    transition: background-color .12s ease, color .12s ease;
+  }
+  .theme-btn:hover { background: var(--surface-2); color: var(--text); }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 72px 0 40px; text-align: center; }
+  .hero h1 {
+    font-size: clamp(28px, 6vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    max-width: 21ch;
+    margin: 0 auto;
+  }
+  .hero .sub {
+    margin: 20px auto 0;
+    max-width: 52ch;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .cta { margin-top: 32px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: inherit; font-size: 14px; font-weight: 500;
+    padding: 11px 20px; border-radius: 8px;
+    text-decoration: none; cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover { box-shadow: 0 2px 12px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .btn.ghost { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .btn.ghost:hover { background: var(--surface-2); }
+  .dl-meta { margin-top: 16px; font-size: 12px; color: var(--text-muted); }
+  .dl-meta a { color: var(--text-muted); }
+  .dl-meta a:hover { color: var(--text); }
+  .dl-note { margin: 10px auto 0; max-width: 56ch; font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+  .dl-note a { color: var(--text-muted); }
+  .dl-note a:hover { color: var(--text); }
+
+  /* install command */
+  .cmd {
+    display: inline-flex; align-items: center; gap: 10px;
+    max-width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 8px 9px 16px;
+    text-align: left;
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+  .cmd .prompt { color: var(--accent); font-weight: 600; user-select: none; }
+  .cmd code {
+    font: inherit; font-size: 12.5px;
+    white-space: nowrap; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .cmd code::-webkit-scrollbar { display: none; }
+  .cmd .copy {
+    flex: none; width: 30px; height: 30px;
+    border: none; border-radius: 6px;
+    background: transparent; color: var(--text-muted);
+    cursor: pointer; display: grid; place-items: center;
+    transition: background-color .12s ease, color .12s ease;
+  }
+  .cmd .copy:hover { background: var(--surface-2); color: var(--text); }
+  .cmd .copy.done, .cmd .copy.done:hover { color: var(--accent); }
+
+  /* ---------- sections ---------- */
+  .eyebrow {
+    font-size: 12px; font-weight: 500;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+  section { padding: 56px 0 0; }
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    column-gap: 40px;
+  }
+  .feature {
+    border-top: 1px solid var(--border);
+    padding: 22px 0 30px;
+  }
+  .feature .num { font-size: 12px; color: var(--text-muted); }
+  .feature h3 { font-size: 15px; font-weight: 600; margin: 10px 0 8px; letter-spacing: -0.01em; }
+  .feature p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .feature code { font-family: inherit; white-space: nowrap; }
+  .kbd {
+    display: inline-block;
+    font-size: 11px; line-height: 1;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 6px 4px;
+    margin: 0 1px;
+    transition: background-color .15s ease, border-color .15s ease;
+  }
+
+  /* ---------- download ---------- */
+  .download {
+    margin-top: 64px;
+    border-top: 1px solid var(--border);
+    padding: 64px 0 24px;
+    text-align: center;
+  }
+  .download h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .download .sub { margin-top: 10px; font-size: 13px; color: var(--text-muted); }
+  .download .cta { margin-top: 28px; }
+  .fineprint {
+    margin: 28px auto 0; max-width: 58ch;
+    font-size: 12px; color: var(--text-muted); line-height: 1.7;
+  }
+  .fineprint a { color: var(--text-muted); }
+  .fineprint a:hover { color: var(--text); }
+
+  /* ---------- footer ---------- */
+  footer {
+    margin-top: 72px;
+    border-top: 1px solid var(--border);
+    padding: 24px 0 40px;
+    display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    font-size: 12px; color: var(--text-muted);
+  }
+  footer a { color: var(--text-muted); text-decoration: none; }
+  footer a:hover { color: var(--text); text-decoration: underline; }
+  footer .links { display: flex; gap: 18px; }
+
+  /* ---------- load reveal ---------- */
+  .reveal { opacity: 0; animation: rise .5s ease-out forwards; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  @media (max-width: 800px) {
+    .features { grid-template-columns: repeat(2, 1fr); column-gap: 28px; }
+  }
+  @media (max-width: 540px) {
+    .features { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+    .reveal { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="temple" aria-hidden="true"></div>
+<div class="wrap">
+
+  <header class="topbar reveal">
+    <a class="wordmark" href="#">Moneta</a>
+    <div class="topbar-right">
+      <button class="theme-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" style="padding-top: 64px;">
+      <h1 class="reveal" style="animation-delay:.05s">Keep what your hand writes.</h1>
+      <p class="sub reveal" style="animation-delay:.12s">
+        Moneta is a minimal handwriting notebook for macOS and your drawing
+        tablet. Your ink, one floating island of tools, and nothing else.
+      </p>
+      <div class="cta reveal" style="animation-delay:.19s">
+        <div class="cmd" data-cmd="curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash">
+          <span class="prompt" aria-hidden="true">$</span>
+          <code>curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash</code>
+          <button class="copy" aria-label="Copy install command" title="Copy">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="dl-meta reveal" style="animation-delay:.24s">
+        <span data-version>v1.0.0</span> &middot; universal (Apple silicon + Intel) &middot; <span data-size>8.7 MB</span> &middot; Free
+      </p>
+    </section>
+
+    <section id="features">
+      <p class="eyebrow">Features</p>
+      <div class="features">
+        <div class="feature">
+          <span class="num">01</span>
+          <h3>Ink first</h3>
+          <p>Pressure-sensitive pen tuned for drawing tablets. Nothing ever sits between pen-down and ink &mdash; no lag, no ceremony.</p>
+        </div>
+        <div class="feature">
+          <span class="num">02</span>
+          <h3>One island, no bars</h3>
+          <p>Every tool in a single floating pill, on keys <span class="kbd">1</span>&ndash;<span class="kbd">5</span>. No menus, no toolbars, no sidebars &mdash; chrome appears on demand and disappears.</p>
+        </div>
+        <div class="feature">
+          <span class="num">03</span>
+          <h3>A library of your ink</h3>
+          <p>Notebooks show live thumbnails of real pages, file into projects, and reopen exactly where you last edited. Fuzzy search on <span class="kbd">&#8984;K</span>.</p>
+        </div>
+        <div class="feature">
+          <span class="num">04</span>
+          <h3>Glass</h3>
+          <p>Fade the paper away and write over whatever is behind the window &mdash; a paper, a video, a design. <span class="kbd">g&nbsp;g</span> toggles it; click-through included.</p>
+        </div>
+        <div class="feature">
+          <span class="num">05</span>
+          <h3>Paper &amp; slate</h3>
+          <p>Light mode reads as paper, dark as slate, and your black ink turns bone-white on its own. This page does it too &mdash; try the toggle above.</p>
+        </div>
+        <div class="feature">
+          <span class="num">06</span>
+          <h3>Plain files, no cloud</h3>
+          <p>Notebooks are plain JSON in <code>~/Moneta</code>. Fully offline, no accounts, no telemetry. Export any page range to PDF, SVG, or PNG.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>Named for Juno Moneta, Roman keeper of memory.</span>
+    <span class="links">
+      <a href="https://github.com/aristocrat71/Moneta" target="_blank">Source</a>
+      <a href="https://github.com/aristocrat71/Moneta/releases" target="_blank">Releases</a>
+      <a href="https://github.com/aristocrat71/Moneta/blob/main/CHANGELOG.md" target="_blank">Changelog</a>
+    </span>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    /* theme toggle, persisted */
+    var root = document.documentElement;
+    document.getElementById('themeToggle').addEventListener('click', function () {
+      var systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+      var current = root.dataset.theme || (systemDark ? 'dark' : 'light');
+      var next = current === 'dark' ? 'light' : 'dark';
+      root.dataset.theme = next;
+      try { localStorage.setItem('moneta-theme', next); } catch (e) {}
+    });
+
+    /* copy the install command */
+    var COPY_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    var CHECK_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+    document.querySelectorAll('.cmd').forEach(function (el) {
+      var btn = el.querySelector('.copy');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        navigator.clipboard.writeText(el.dataset.cmd).then(function () {
+          btn.classList.add('done');
+          btn.innerHTML = CHECK_ICON;
+          setTimeout(function () {
+            btn.classList.remove('done');
+            btn.innerHTML = COPY_ICON;
+          }, 1600);
+        }).catch(function () {});
+      });
+    });
+
+    /* keep the .dmg link pointing at the latest release */
+    fetch('https://api.github.com/repos/aristocrat71/Moneta/releases/latest')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (rel) {
+        if (!rel || !rel.assets) return;
+        var dmg = rel.assets.find(function (a) { return a.name.endsWith('.dmg'); });
+        if (!dmg) return;
+        document.querySelectorAll('[data-dmg]').forEach(function (a) { a.href = dmg.browser_download_url; });
+        document.querySelectorAll('[data-version]').forEach(function (e) { e.textContent = rel.tag_name; });
+        document.querySelectorAll('[data-size]').forEach(function (e) {
+          e.textContent = (dmg.size / 1048576).toFixed(1) + ' MB';
+        });
+      })
+      .catch(function () {});
+  })();
+</script>
+</body>
+</html>

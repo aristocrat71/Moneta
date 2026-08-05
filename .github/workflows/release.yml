@@ -114,7 +114,7 @@ jobs:
             echo '### Install'
             echo
             echo '```sh'
-            echo "curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/${GITHUB_REF_NAME}/install.sh | bash"
+            echo 'curl -fsSL https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash'
             echo '```'
             echo
             echo 'Or download the .dmg below. Moneta is not notarized yet, so a'

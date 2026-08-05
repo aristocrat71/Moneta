@@ -139,7 +139,7 @@
     color: var(--text-muted);
   }
   /* lift hero text off the engraving without drawing a box around it */
-  .hero h1, .hero .sub, .dl-meta {
+  .hero h1, .hero .sub, .dl-meta, .paste-hint {
     text-shadow: 0 0 10px var(--bg), 0 0 22px var(--bg), 0 0 34px var(--bg);
   }
   .cta { margin-top: 32px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
@@ -163,32 +163,28 @@
   .dl-note a:hover { color: var(--text); }
 
   /* install command */
-  .cmd {
-    display: inline-flex; align-items: center; gap: 10px;
-    max-width: 100%;
+  .copy-cmd .icon { display: grid; place-items: center; }
+  .paste-hint { margin: 14px auto 0; font-size: 12.5px; color: var(--text-muted); }
+  .paste-hint kbd {
+    font: inherit; font-size: 11.5px;
+    padding: 1px 5px; border-radius: 4px;
+    background: var(--surface-2); border: 1px solid var(--border);
+  }
+  /* Shown only if the clipboard write fails. The command isn't on screen
+     anymore, so without this a blocked copy would leave nothing to install with. */
+  .cmd-fallback {
+    display: block; margin: 14px auto 0; max-width: 100%;
+    padding: 10px 14px; text-align: left;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 9px 8px 9px 16px;
-    text-align: left;
-    transition: background-color .15s ease, border-color .15s ease;
+    font: inherit; font-size: 12px;
+    white-space: nowrap; overflow-x: auto; scrollbar-width: none;
+    user-select: all;
   }
-  .cmd .prompt { color: var(--accent); font-weight: 600; user-select: none; }
-  .cmd code {
-    font: inherit; font-size: 12.5px;
-    white-space: nowrap; overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .cmd code::-webkit-scrollbar { display: none; }
-  .cmd .copy {
-    flex: none; width: 30px; height: 30px;
-    border: none; border-radius: 6px;
-    background: transparent; color: var(--text-muted);
-    cursor: pointer; display: grid; place-items: center;
-    transition: background-color .12s ease, color .12s ease;
-  }
-  .cmd .copy:hover { background: var(--surface-2); color: var(--text); }
-  .cmd .copy.done, .cmd .copy.done:hover { color: var(--accent); }
+  .cmd-fallback::-webkit-scrollbar { display: none; }
+  /* An author `display` beats the UA sheet's [hidden] rule, so restate it. */
+  .cmd-fallback[hidden] { display: none; }
 
   /* ---------- sections ---------- */
   .eyebrow {
@@ -297,14 +293,15 @@
         tablet. Your ink, one floating island of tools, and nothing else.
       </p>
       <div class="cta reveal" style="animation-delay:.19s">
-        <div class="cmd" data-cmd="curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash">
-          <span class="prompt" aria-hidden="true">$</span>
-          <code>curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash</code>
-          <button class="copy" aria-label="Copy install command" title="Copy">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          </button>
-        </div>
+        <button class="btn primary copy-cmd" data-cmd="curl -fsSL --connect-timeout 10 https://raw.githubusercontent.com/aristocrat71/Moneta/main/install.sh | bash">
+          <span class="icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+          <span class="label" aria-live="polite">Copy command</span>
+        </button>
       </div>
+      <p class="paste-hint reveal" style="animation-delay:.22s">
+        Then paste it in your Terminal and press <kbd>Enter</kbd>.
+      </p>
+      <code class="cmd-fallback" hidden></code>
       <p class="dl-meta reveal" style="animation-delay:.24s">
         <span data-version>v1.0.0</span> &middot; universal (Apple silicon + Intel) &middot; <span data-size>8.7 MB</span> &middot; Free
       </p>
@@ -397,20 +394,29 @@
       });
     }
 
-    document.querySelectorAll('.cmd').forEach(function (el) {
-      var btn = el.querySelector('.copy');
-      if (!btn) return;
+    document.querySelectorAll('.copy-cmd').forEach(function (btn) {
+      var icon = btn.querySelector('.icon');
+      var label = btn.querySelector('.label');
+      var idle = label.textContent;
+      var fallback = document.querySelector('.cmd-fallback');
+      var timer;
       btn.addEventListener('click', function () {
-        copyText(el.dataset.cmd).then(function () {
-          btn.classList.add('done');
-          btn.innerHTML = CHECK_ICON;
-          setTimeout(function () {
-            btn.classList.remove('done');
-            btn.innerHTML = COPY_ICON;
+        copyText(btn.dataset.cmd).then(function () {
+          icon.innerHTML = CHECK_ICON;
+          label.textContent = 'Copied';
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            icon.innerHTML = COPY_ICON;
+            label.textContent = idle;
           }, 1600);
         }).catch(function () {
-          // Nothing reached the clipboard — surface it instead of looking copied.
-          btn.title = 'Copy failed — select the command and copy manually';
+          // Nothing reached the clipboard, and the command is no longer on
+          // screen — reveal it so it can still be selected by hand.
+          label.textContent = 'Copy it manually';
+          if (fallback) {
+            fallback.textContent = btn.dataset.cmd;
+            fallback.hidden = false;
+          }
         });
       });
     });

@@ -62,8 +62,7 @@ function normalizePage(raw: unknown): DocPage {
   };
 }
 
-/** Absent in notebooks written before view-restore, and dropped if malformed —
- *  a bad anchor just means reopening falls back to the last-ink heuristic. */
+/** Dropped when absent or malformed — reopening then falls back to the last stroke. */
 function normalizeView(raw: unknown, pageCount: number): ViewAnchor | null {
   if (typeof raw !== 'object' || raw === null) return null;
   const v = raw as RawDoc;

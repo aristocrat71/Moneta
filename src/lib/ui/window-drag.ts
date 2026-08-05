@@ -1,6 +1,5 @@
-// Explicit window-drag for the chromeless bars. The `data-tauri-drag-region`
-// attribute proved unreliable in WKWebView, so the bars call startDragging
-// directly. Only bare bar area drags — clicks on child controls are ignored.
+// Explicit window-drag for the chromeless bars: `data-tauri-drag-region` proved
+// unreliable in WKWebView, so the bars call startDragging directly.
 
 import { getCurrentWindow } from '@tauri-apps/api/window';
 

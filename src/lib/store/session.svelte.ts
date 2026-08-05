@@ -1,6 +1,5 @@
-// The open notebook. The document itself is a plain (non-reactive) object —
-// the ink engine mutates stroke arrays directly; the UI observes only the
-// summary $state fields here (title, counts, undo flags).
+// The open notebook. The document is a plain non-reactive object — the UI
+// observes only the summary $state fields here (title, counts, undo flags).
 
 import { ipc } from '$lib/ipc';
 import { History, type Command } from '$lib/doc/commands';

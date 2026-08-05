@@ -1,6 +1,5 @@
 <script lang="ts">
-  // Destructive confirmation: shows what you're deleting (thumbnail when
-  // available); default action is Cancel (DESIGN.md §5.4).
+  // Destructive confirmation: shows what you're deleting; Cancel is the default.
   let {
     open = $bindable(false),
     title,

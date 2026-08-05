@@ -62,8 +62,8 @@ function mustPage(doc: NotebookDoc, pageId: string): DocPage {
   return page;
 }
 
-/** Apply an affine matrix to flat [x, y, p] triples — returns a new array so
- *  render caches keyed on array identity invalidate. */
+/** Apply an affine matrix to flat [x, y, p] triples — a new array, so caches
+ *  keyed on array identity invalidate. */
 export function transformPoints(points: number[], m: Mat): number[] {
   const out = new Array<number>(points.length);
   for (let i = 0; i + 2 < points.length; i += 3) {
@@ -136,8 +136,7 @@ export function cmdEraseStrokes(pageId: string, ids: string[], label = 'Erase'):
   };
 }
 
-/** Partial erase: each original stroke is replaced in place by its surviving
- *  segments (possibly none). Undo restores the originals exactly. */
+/** Partial erase: strokes replaced in place by their surviving segments. */
 export function cmdSplitStrokes(pageId: string, edits: StrokeEdit[], label = 'Erase'): Command {
   const replaceMap = new Map(edits.map((e) => [e.before.id, e.after]));
   const afterIds = new Set(edits.flatMap((e) => e.after.map((s) => s.id)));
@@ -225,9 +224,7 @@ export function cmdRecolorStrokes(pageId: string, ids: string[], color: string):
   };
 }
 
-/** Page background. Templates live per page, so changing a notebook's
- *  background is one command over its whole page list — undo puts every page
- *  back on the template it had, mixed notebooks included. */
+/** Page background: one command over every page, so undo restores the old mix. */
 export function cmdSetTemplate(pageIds: string[], template: TemplateKind): Command {
   const idSet = new Set(pageIds);
   let saved: { id: string; template: TemplateKind }[] | null = null;

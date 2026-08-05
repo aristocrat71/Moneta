@@ -1,5 +1,4 @@
 <script lang="ts">
-  // Last child of an expanded group — the one place a project grows.
   import { goto } from '$app/navigation';
   import { Plus } from '@lucide/svelte';
   import { library } from '$lib/store/library.svelte';

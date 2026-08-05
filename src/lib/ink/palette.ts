@@ -1,6 +1,5 @@
-// The curated ink palette. Strokes store semantic ids ("ink/black") so black
-// ink renders bone-white on dark pages automatically; custom hex colors
-// render as-is on both themes (DESIGN.md §5.6).
+// The curated ink palette. Strokes store semantic ids ("ink/black") so black ink
+// renders bone-white on dark pages; custom hex colors render as-is on both.
 
 export interface InkDef {
   id: string;

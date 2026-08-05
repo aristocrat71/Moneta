@@ -1,5 +1,4 @@
-// Export orchestration. Files land in ~/Moneta/exports; rendering always
-// uses light-paper (DESIGN.md §5.6).
+// Export orchestration. Files land in ~/Moneta/exports, always on light paper.
 
 import { ipc } from '$lib/ipc';
 import { DEFAULT_TUNING, renderPageBitmap } from '$lib/ink/engine';
@@ -7,8 +6,11 @@ import { getThemePaint } from '$lib/ui/theme-paint';
 import type { NotebookDoc } from '$lib/doc/model';
 import { buildPdf } from './pdf';
 import { buildPageSvg } from './svg';
+import { resolveRange, rangeSuffix, type PageRange } from './range';
 
 export type ExportKind = 'pdf' | 'png' | 'svg';
+
+export { resolveRange, rangeSuffix, type PageRange };
 
 function b64FromBytes(bytes: Uint8Array): string {
   let binary = '';
@@ -28,21 +30,29 @@ function safeName(title: string): string {
   return cleaned.length > 0 ? cleaned : 'Untitled';
 }
 
-/** Returns the written path (pdf) or the export folder (png/svg). */
-export async function exportNotebook(doc: NotebookDoc, kind: ExportKind): Promise<string> {
+/** Returns the written path (pdf) or the export folder (png/svg). `range` is
+ *  inclusive and 1-based; pages keep their own numbers in png/svg filenames. */
+export async function exportNotebook(
+  doc: NotebookDoc,
+  kind: ExportKind,
+  range?: PageRange | null,
+): Promise<string> {
   const paint = getThemePaint(false);
-  const name = safeName(doc.title);
+  const span = resolveRange(doc.pages.length, range);
+  const pages = doc.pages.slice(span.from - 1, span.to);
+  const name = safeName(doc.title) + rangeSuffix(span, doc.pages.length);
 
   if (kind === 'pdf') {
-    return ipc.exportFile(`${name}.pdf`, b64FromBytes(buildPdf(doc.pages, paint)));
+    return ipc.exportFile(`${name}.pdf`, b64FromBytes(buildPdf(pages, paint)));
   }
 
   let lastPath = '';
-  for (let i = 0; i < doc.pages.length; i++) {
-    const page = doc.pages[i];
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    const num = span.from + i;
     if (kind === 'svg') {
-      const svg = buildPageSvg(page, paint, `${doc.title} — page ${i + 1}`);
-      lastPath = await ipc.exportFile(`${name}/p${i + 1}.svg`, b64FromText(svg));
+      const svg = buildPageSvg(page, paint, `${doc.title} — page ${num}`);
+      lastPath = await ipc.exportFile(`${name}/p${num}.svg`, b64FromText(svg));
     } else {
       const canvas = renderPageBitmap({
         strokes: page.strokes,
@@ -53,7 +63,7 @@ export async function exportNotebook(doc: NotebookDoc, kind: ExportKind): Promis
         width: page.size.w * 2,
       });
       const data = canvas.toDataURL('image/png').split(',')[1];
-      lastPath = await ipc.exportFile(`${name}/p${i + 1}.png`, data);
+      lastPath = await ipc.exportFile(`${name}/p${num}.png`, data);
     }
   }
   return lastPath.slice(0, lastPath.lastIndexOf('/'));

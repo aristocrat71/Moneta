@@ -1,4 +1,4 @@
-/* ————— Moneta design tokens (DESIGN.md §2.1) ————— */
+/* ————— Moneta design tokens ————— */
 
 [data-theme='light'] {
   color-scheme: light;
@@ -116,7 +116,7 @@ textarea {
   background-clip: content-box;
 }
 
-/* ————— Glass (DESIGN.md §4.5) —————
+/* ————— Glass —————
    The window itself is transparent; normally every surface behind the ink is
    opaque, so nothing shows through. Glass mode drops the app background and
    lets the page's own paint carry what little paper is left. */
@@ -126,7 +126,7 @@ html.glass body {
   background: transparent;
 }
 
-/* ————— Library tree rows (DESIGN.md §3) —————
+/* ————— Library tree rows —————
    Shared chrome for every row of the tree: one height, one indent scale,
    one hover fill. Each row component styles only what makes it itself. */
 

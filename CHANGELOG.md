@@ -12,6 +12,33 @@ copy of Moneta sees when it checks for updates. A tag with no matching section
 here fails the release before anything is built. Write the entry as you merge,
 not at tag time.
 
+## [1.0.0] - 2026-08-05
+
+Moneta is finished, in the sense that matters: everything it set out to do, it
+does. Open it, write, and it stays written.
+
+1.0 is a promise about the two things you can't undo later. **Your notebooks are
+safe** — plain JSON at `~/Moneta/notebooks`, written atomically, versioned, and
+migrated forward, so a file written today opens in every version that follows.
+**Updates keep arriving** — signed, checked at launch, installed when you say so.
+Nothing else about the app is load-bearing enough to need a number.
+
+What's here: pressure-sensitive ink with pen, highlighter, eraser, shapes and
+lasso; multi-page notebooks on four papers; glass, for writing straight over
+whatever is behind the window; a library that holds projects, searches with ⌘K,
+and reopens each notebook exactly where you left the pen; export to PDF, PNG and
+SVG; and the whole thing offline apart from the update check.
+
+### Added
+
+- **PDF export shows the pages first.** `⋯ → Export → PDF…` opens a sheet with
+  the page in front of you — the real export rendering, on light paper, however
+  you write — and **Pages [from] to [to]** for exporting part of a notebook.
+  The preview steps through the pages the range covers, so narrowing it is
+  something you watch happen rather than guess at. A partial export names
+  itself — `Spec (pages 2-5).pdf` — and never overwrites the whole notebook's.
+  PNG and SVG still export straight out, as before.
+
 ## [0.6.0] - 2026-08-05
 
 Open a notebook and the page is already where you left the pen, and every key

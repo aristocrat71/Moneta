@@ -1,6 +1,4 @@
-// What the keyboard can do, per screen. Kept beside the code it documents so a
-// key that moves here moves in the sheet too — every entry below is a handler
-// in routes/+page.svelte, routes/notebook/[id]/+page.svelte or +layout.svelte.
+// What the keyboard can do, per screen. Every entry below has a live handler.
 
 export interface Shortcut {
   /** Chords, rendered as separate keycaps: ['⌘N'] or ['↑', '↓']. */

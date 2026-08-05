@@ -1,6 +1,6 @@
 [package]
 name = "moneta"
-version = "0.6.0"
+version = "1.0.0"
 description = "Minimalist handwriting notes for drawing tablets"
 authors = ["mitul"]
 edition = "2021"

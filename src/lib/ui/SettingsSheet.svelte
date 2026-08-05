@@ -3,6 +3,8 @@
   import { settings } from '$lib/store/settings.svelte';
   import { theme } from '$lib/store/theme.svelte';
   import { library } from '$lib/store/library.svelte';
+  import { appInfo } from '$lib/store/app.svelte';
+  import { updater } from '$lib/store/updater.svelte';
   import { X } from '@lucide/svelte';
 
   const prefs = [
@@ -10,6 +12,37 @@
     { value: 'light', label: 'Light' },
     { value: 'dark', label: 'Dark' },
   ] as const;
+
+  const updateLabel = $derived.by(() => {
+    switch (updater.status) {
+      case 'checking':
+        return 'Checking…';
+      case 'downloading':
+        return updater.progress >= 0
+          ? `Downloading ${Math.round(updater.progress * 100)}%`
+          : 'Downloading…';
+      case 'ready':
+        return 'Restart to update';
+      default:
+        return 'Check for updates';
+    }
+  });
+
+  /** The line under the button — what the last check actually found. */
+  const updateHint = $derived.by(() => {
+    switch (updater.status) {
+      case 'ready':
+        return `Moneta ${updater.version} is staged`;
+      case 'current':
+        return "You're on the latest version";
+      case 'unreachable':
+        return "Couldn't reach the update server";
+      case 'failed':
+        return `Update failed · ${updater.error ?? 'unknown error'}`;
+      default:
+        return appInfo.version ? `Moneta ${appInfo.version}` : '';
+    }
+  });
 
   function onkeydown(e: KeyboardEvent) {
     if (ui.settingsOpen && e.key === 'Escape') {
@@ -80,6 +113,23 @@
       <div class="row">
         <span class="label">Storage</span>
         <span class="path">{library.root || '~/Moneta'}</span>
+      </div>
+
+      <div class="row">
+        <span class="label">Updates</span>
+        <div class="update">
+          <button
+            class="btn"
+            disabled={updater.busy}
+            onclick={() =>
+              updater.status === 'ready' ? void updater.restart() : void updater.run(true)}
+          >
+            {updateLabel}
+          </button>
+          {#if updateHint}
+            <span class="hint">{updateHint}</span>
+          {/if}
+        </div>
       </div>
     </div>
   </div>
@@ -172,6 +222,34 @@
   .hint {
     font-size: 12px;
     color: var(--text-muted);
+  }
+  .update {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 0;
+  }
+  .update .hint {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .btn {
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+  .btn:disabled {
+    color: var(--text-muted);
+    cursor: default;
   }
   .path {
     font-size: 12px;

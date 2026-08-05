@@ -68,6 +68,24 @@ describe('migrateNotebook', () => {
     expect(doc.pages[0].strokes[0].points).toEqual([1, 2, 0.5]);
   });
 
+  test('keeps a well-formed lastView and clamps its page', () => {
+    const doc = migrateNotebook({
+      id: 'x',
+      lastView: { page: 7, x: -12.5, y: 340 },
+      pages: [{}, {}],
+    });
+    expect(doc.lastView).toEqual({ page: 1, x: -12.5, y: 340 });
+  });
+
+  test('drops a missing or malformed lastView', () => {
+    expect(migrateNotebook({ id: 'x' }).lastView).toBeNull();
+    expect(migrateNotebook({ id: 'x', lastView: 'nope' }).lastView).toBeNull();
+    expect(migrateNotebook({ id: 'x', lastView: { page: 0, x: 1 } }).lastView).toBeNull();
+    expect(
+      migrateNotebook({ id: 'x', lastView: { page: 0, x: NaN, y: 0 } }).lastView,
+    ).toBeNull();
+  });
+
   test('rejects documents from a newer format', () => {
     expect(() => migrateNotebook({ formatVersion: FORMAT_VERSION + 1 })).toThrow(
       MigrationError,

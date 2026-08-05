@@ -247,7 +247,11 @@
 
 <div class="library">
   <header role="presentation" onmousedown={beginWindowDrag}>
-    <span class="wordmark" role="presentation" onmousedown={beginWindowDrag}>Moneta</span>
+    <!-- The wordmark opens About rather than dragging the window: a control
+         can't do both, and the rest of the header is drag surface enough. -->
+    <button class="wordmark" title="About Moneta" onclick={() => (ui.aboutOpen = true)}>
+      Moneta
+    </button>
     <div class="tools">
       <LibrarySearch bind:open={searchOpen} />
       <button
@@ -385,8 +389,14 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    padding: 3px 8px;
+    border-radius: 6px;
     font-size: 14px;
     font-weight: 550;
+    color: var(--text);
+  }
+  .wordmark:hover {
+    background: var(--surface-2);
   }
   .tools {
     display: flex;

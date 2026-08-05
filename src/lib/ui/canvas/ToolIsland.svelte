@@ -59,8 +59,8 @@
   const toolButtons: { tool: ToolKind; icon: typeof Pen; label: string; key: string }[] = [
     { tool: 'pen', icon: Pen, label: 'Pen', key: 'P' },
     { tool: 'shape', icon: Square, label: 'Shapes', key: 'R' },
-    { tool: 'highlighter', icon: Highlighter, label: 'Highlighter', key: 'H' },
     { tool: 'eraser', icon: Eraser, label: 'Eraser', key: 'E' },
+    { tool: 'highlighter', icon: Highlighter, label: 'Highlighter', key: 'H' },
     { tool: 'lasso', icon: Lasso, label: 'Lasso', key: 'S' },
   ];
 

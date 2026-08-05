@@ -30,7 +30,7 @@
     cmdTransformStrokes,
     transformPoints,
   } from '$lib/doc/commands';
-  import { newPage, type DocPage } from '$lib/doc/model';
+  import { newPage, type DocPage, type ViewAnchor } from '$lib/doc/model';
   import { session } from '$lib/store/session.svelte';
   import { settings } from '$lib/store/settings.svelte';
   import { theme } from '$lib/store/theme.svelte';
@@ -316,6 +316,10 @@
     setZoom((s.clientWidth - 96) / pageW);
   }
 
+  function clampScroll(v: number, max: number): number {
+    return Math.max(0, Math.min(v, Math.max(0, max)));
+  }
+
   function scrollToPage(i: number, smooth = true): void {
     scroller?.scrollTo({
       top: Math.max(0, pageOffset(i) - 16),
@@ -323,15 +327,48 @@
     });
   }
 
+  /** The page-unit point under the viewport's top-left corner. Saved with every
+   *  edit (see session.captureView) and replayed by scrollToResume. */
+  function currentView(): ViewAnchor | null {
+    const s = scroller;
+    if (!s || !session.doc || pageCount === 0) return null;
+    const page = Math.min(
+      Math.max(0, Math.floor((s.scrollTop - PAD_TOP) / rowH)),
+      pageCount - 1,
+    );
+    return {
+      page,
+      x: (s.scrollLeft - pageLeftIn(s.clientWidth)) / zoom,
+      y: (s.scrollTop - pageOffset(page)) / zoom,
+    };
+  }
+
   /**
-   * Resume where the ink left off: jump to the most recent stroke on the last
-   * open page (searching back for the nearest page that has ink), so reopening
-   * a long notebook lands on the writing rather than the top of the sheet.
+   * Resume where the last edit happened — rotate, ink, highlight, erase, all of
+   * them park the viewport (session.captureView). Notebooks written before that
+   * existed have no anchor, so they fall back to the older heuristic: the most
+   * recent stroke on the last open page, searching back for the nearest page
+   * that has ink, so reopening lands on the writing rather than a blank sheet.
    */
   function scrollToResume(): void {
     const s = scroller;
     const doc = session.doc;
     if (!s || !doc) return;
+
+    const view = doc.lastView;
+    if (view) {
+      const i = Math.min(Math.max(0, view.page), doc.pages.length - 1);
+      s.scrollTo({
+        top: clampScroll(pageOffset(i) + view.y * zoom, s.scrollHeight - s.clientHeight),
+        left: clampScroll(
+          pageLeftIn(s.clientWidth) + view.x * zoom,
+          s.scrollWidth - s.clientWidth,
+        ),
+        behavior: 'auto',
+      });
+      return;
+    }
+
     const start = Math.min(Math.max(0, session.currentPage), doc.pages.length - 1);
     let target = -1;
     for (let i = start; i >= 0; i--) {
@@ -736,6 +773,7 @@
 
   onMount(() => {
     dpr = window.devicePixelRatio || 1;
+    session.captureView = currentView;
     let cancelled = false;
     void (async () => {
       try {
@@ -770,6 +808,7 @@
       s?.removeEventListener('gesturechange', onGestureChange as EventListener);
       engine.destroy();
       session.onPagesChanged = () => {};
+      session.captureView = null;
       void session.close();
     };
   });

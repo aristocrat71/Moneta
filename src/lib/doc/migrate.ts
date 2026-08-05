@@ -2,7 +2,7 @@
 // always migrates forward and never writes back until the user saves.
 
 import { FORMAT_VERSION, PAGE_SIZE } from './model';
-import type { DocPage, NotebookDoc } from './model';
+import type { DocPage, NotebookDoc, ViewAnchor } from './model';
 import type { StrokeData, TemplateKind } from '$lib/ink/engine';
 
 type RawDoc = Record<string, unknown>;
@@ -62,6 +62,22 @@ function normalizePage(raw: unknown): DocPage {
   };
 }
 
+/** Absent in notebooks written before view-restore, and dropped if malformed —
+ *  a bad anchor just means reopening falls back to the last-ink heuristic. */
+function normalizeView(raw: unknown, pageCount: number): ViewAnchor | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const v = raw as RawDoc;
+  if (typeof v.page !== 'number' || typeof v.x !== 'number' || typeof v.y !== 'number') {
+    return null;
+  }
+  if (!Number.isFinite(v.x) || !Number.isFinite(v.y) || !Number.isFinite(v.page)) return null;
+  return {
+    page: Math.min(Math.max(0, Math.floor(v.page)), pageCount - 1),
+    x: v.x,
+    y: v.y,
+  };
+}
+
 /** Migrate a parsed .moneta JSON value forward and normalize every field. */
 export function migrateNotebook(raw: unknown): NotebookDoc {
   if (typeof raw !== 'object' || raw === null) {
@@ -92,6 +108,7 @@ export function migrateNotebook(raw: unknown): NotebookDoc {
     createdAt: asNumber(doc.createdAt, Date.now()),
     modifiedAt: asNumber(doc.modifiedAt, Date.now()),
     lastOpenPage: Math.min(Math.max(0, Math.floor(lastOpen)), normalizedPages.length - 1),
+    lastView: normalizeView(doc.lastView, normalizedPages.length),
     pages: normalizedPages,
   };
 }

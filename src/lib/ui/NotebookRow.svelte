@@ -12,6 +12,7 @@
   import { pagesLabel, relTime } from '$lib/util/format';
   import Menu from './Menu.svelte';
   import ConfirmSheet from './ConfirmSheet.svelte';
+  import ExportSheet from './ExportSheet.svelte';
   import { preview } from './preview.svelte';
   import type { MenuItem } from './menu';
 
@@ -36,6 +37,7 @@
   let renaming = $state(false);
   let draft = $state('');
   let confirmDelete = $state(false);
+  let exportPdf = $state(false);
   let renameInput = $state<HTMLInputElement | null>(null);
 
   const thumb = $derived(library.thumbSrc(nb.id, theme.dark));
@@ -85,7 +87,8 @@
       label: 'Export',
       icon: Download,
       children: [
-        { label: 'PDF', action: () => void runExport('pdf') },
+        // PDF takes the long road: pages to pick, and the ink to check first.
+        { label: 'PDF…', action: () => (exportPdf = true) },
         { label: 'PNG', action: () => void runExport('png') },
         { label: 'SVG', action: () => void runExport('svg') },
       ],
@@ -180,6 +183,8 @@
     <Menu bind:open={menuOpen} items={menuItems} align="right" />
   </div>
 </div>
+
+<ExportSheet bind:open={exportPdf} {nb} />
 
 <ConfirmSheet
   bind:open={confirmDelete}

@@ -11,6 +11,7 @@
   import { pagesLabel, relTime } from '$lib/util/format';
   import Menu from './Menu.svelte';
   import ConfirmSheet from './ConfirmSheet.svelte';
+  import ExportSheet from './ExportSheet.svelte';
   import type { MenuItem } from './menu';
 
   let { nb, showProject = false }: { nb: NotebookMeta; showProject?: boolean } = $props();
@@ -19,6 +20,7 @@
   let renaming = $state(false);
   let draft = $state('');
   let confirmDelete = $state(false);
+  let exportPdf = $state(false);
 
   const thumb = $derived(library.thumbSrc(nb.id, theme.dark));
   const projectName = $derived(showProject ? library.projectName(nb.projectId) : null);
@@ -63,7 +65,8 @@
       label: 'Export',
       icon: Download,
       children: [
-        { label: 'PDF', action: () => void runExport('pdf') },
+        // PDF takes the long road: pages to pick, and the ink to check first.
+        { label: 'PDF…', action: () => (exportPdf = true) },
         { label: 'PNG', action: () => void runExport('png') },
         { label: 'SVG', action: () => void runExport('svg') },
       ],
@@ -143,6 +146,8 @@
     )}
   </span>
 </div>
+
+<ExportSheet bind:open={exportPdf} {nb} />
 
 <ConfirmSheet
   bind:open={confirmDelete}

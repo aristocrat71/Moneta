@@ -12,6 +12,18 @@ copy of Moneta sees when it checks for updates. A tag with no matching section
 here fails the release before anything is built. Write the entry as you merge,
 not at tag time.
 
+## [Unreleased]
+
+### Added
+
+- **PDF export shows the pages first.** `⋯ → Export → PDF…` opens a sheet with
+  the page in front of you — the real export rendering, on light paper, however
+  you write — and **Pages [from] to [to]** for exporting part of a notebook.
+  The preview steps through the pages the range covers, so narrowing it is
+  something you watch happen rather than guess at. A partial export names
+  itself — `Spec (pages 2-5).pdf` — and never overwrites the whole notebook's.
+  PNG and SVG still export straight out, as before.
+
 ## [0.6.0] - 2026-08-05
 
 Open a notebook and the page is already where you left the pen, and every key

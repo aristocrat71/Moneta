@@ -54,6 +54,9 @@
       if (panel?.contains(e.target as Node)) return;
       e.preventDefault();
       e.stopPropagation();
+      // preventDefault suppresses the blur a typed hex commits on.
+      const focused = document.activeElement;
+      if (focused instanceof HTMLElement && panel?.contains(focused)) focused.blur();
       onclose();
     };
     const onKey = (e: KeyboardEvent) => {

@@ -17,14 +17,8 @@
   import { settings } from '$lib/store/settings.svelte';
   import { theme } from '$lib/store/theme.svelte';
   import SwatchGrid from '$lib/ui/SwatchGrid.svelte';
-  import {
-    ERASER_MAX,
-    ERASER_MIN,
-    ERASER_PRESETS,
-    HL_PRESETS,
-    PEN_PRESETS,
-    type ToolState,
-  } from './tool-state';
+  import WidthPicker from './WidthPicker.svelte';
+  import { colorOf, setColorOn, widthOf, type ToolState } from './tool-state';
 
   let {
     tools,
@@ -44,15 +38,9 @@
   let anchorX = $state(0);
   let popLeft = $state<number | null>(null);
 
-  const drawTool = $derived(tools.tool === 'highlighter' ? 'highlighter' : 'pen');
   const isEraser = $derived(tools.tool === 'eraser');
-  const activeColor = $derived(drawTool === 'highlighter' ? tools.hlColor : tools.penColor);
-  const activeWidth = $derived(
-    isEraser ? tools.eraserRadius : drawTool === 'highlighter' ? tools.hlWidth : tools.penWidth,
-  );
-  const presets = $derived(
-    isEraser ? ERASER_PRESETS : drawTool === 'highlighter' ? HL_PRESETS : PEN_PRESETS,
-  );
+  const activeColor = $derived(colorOf(tools));
+  const activeWidth = $derived(widthOf(tools));
   const resolvedColor = $derived(resolveInk(activeColor, theme.dark));
 
   const toolButtons: { tool: ToolKind; icon: typeof Pen; label: string; key: string }[] = [
@@ -72,18 +60,8 @@
   const ShapeIcon = $derived(SHAPE_OPTIONS.find((o) => o.kind === tools.shape)?.icon ?? Square);
 
   function setColor(color: string) {
-    if (drawTool === 'highlighter') tools.hlColor = color;
-    else tools.penColor = color;
-  }
-
-  function setWidth(width: number) {
-    if (isEraser) tools.eraserRadius = width;
-    else if (drawTool === 'highlighter') tools.hlWidth = width;
-    else tools.penWidth = width;
-  }
-
-  function presetDotSize(preset: number): number {
-    return isEraser ? Math.min(4 + preset, 22) : Math.min(4 + preset * 1.6, 22);
+    setColorOn(tools, color);
+    popover = null;
   }
 
   function togglePopover(which: 'color' | 'width' | 'shape', trigger: HTMLElement) {
@@ -199,44 +177,7 @@
         </div>
       {:else if popover === 'width'}
         <div class="popover">
-          <div class="width-presets">
-            {#each presets as preset (preset)}
-              <button
-                class="preset"
-                class:active={Math.abs(activeWidth - preset) < 0.01}
-                aria-label={`Width ${preset}`}
-                onclick={() => setWidth(preset)}
-              >
-                <span
-                  class="preset-dot"
-                  class:hollow={isEraser}
-                  style:width={`${presetDotSize(preset)}px`}
-                  style:height={`${presetDotSize(preset)}px`}
-                  style:background={isEraser ? 'transparent' : resolvedColor}
-                ></span>
-              </button>
-            {/each}
-            <span class="width-value">{activeWidth}px</span>
-          </div>
-          <input
-            class="width-slider"
-            type="range"
-            min={isEraser ? ERASER_MIN : 1}
-            max={isEraser ? ERASER_MAX : 32}
-            step={isEraser ? 1 : 0.5}
-            value={activeWidth}
-            aria-label={isEraser ? 'Eraser size' : 'Stroke width'}
-            oninput={(e) => setWidth(Number(e.currentTarget.value))}
-          />
-          <div class="preview-well">
-            <span
-              class="preview-dot"
-              class:hollow={isEraser}
-              style:width={`${isEraser ? Math.min(activeWidth * 2, 40) : activeWidth}px`}
-              style:height={`${isEraser ? Math.min(activeWidth * 2, 40) : activeWidth}px`}
-              style:background={isEraser ? 'transparent' : resolvedColor}
-            ></span>
-          </div>
+          <WidthPicker {tools} />
         </div>
       {:else if popover === 'shape'}
         <div class="popover shape-pop">
@@ -439,11 +380,6 @@
       transform: translateY(8px);
     }
   }
-  .width-presets {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
   .preset {
     display: grid;
     place-items: center;
@@ -458,42 +394,11 @@
     background: var(--surface-2);
     outline: 1px solid var(--accent);
   }
-  .preset-dot {
-    border-radius: 999px;
-  }
-  .preset-dot.hollow {
-    border: 1.5px solid var(--text);
-  }
   .shape-pop {
     min-width: 0;
   }
   .shape-row {
     display: flex;
     gap: 4px;
-  }
-  .width-value {
-    margin-left: auto;
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-  .width-slider {
-    width: 100%;
-    margin-top: 10px;
-    accent-color: var(--accent);
-  }
-  .preview-well {
-    display: grid;
-    place-items: center;
-    height: 44px;
-    margin-top: 10px;
-    background: var(--canvas);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-  }
-  .preview-dot {
-    border-radius: 999px;
-  }
-  .preview-dot.hollow {
-    border: 1.5px solid var(--text);
   }
 </style>

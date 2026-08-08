@@ -36,6 +36,8 @@ export const CANVAS_SHORTCUTS: ShortcutGroup[] = [
       { keys: ['3'], label: 'Eraser' },
       { keys: ['4'], label: 'Highlighter' },
       { keys: ['5'], label: 'Lasso select' },
+      { keys: ['C', 'C'], label: 'Ink color, beside the pointer' },
+      { keys: ['C', 'S'], label: 'Stroke width, beside the pointer' },
     ],
   },
   {

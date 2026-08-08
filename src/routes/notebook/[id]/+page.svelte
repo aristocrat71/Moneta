@@ -37,6 +37,7 @@
   import { getThemePaint } from '$lib/ui/theme-paint';
   import CanvasTopBar from '$lib/ui/canvas/CanvasTopBar.svelte';
   import ToolIsland from '$lib/ui/canvas/ToolIsland.svelte';
+  import PointerPicker from '$lib/ui/canvas/PointerPicker.svelte';
   import PageSheet from '$lib/ui/canvas/PageSheet.svelte';
   import PageControls from '$lib/ui/canvas/PageControls.svelte';
   import PageOverview from '$lib/ui/canvas/PageOverview.svelte';
@@ -163,7 +164,10 @@
 
   function setPassThrough(on: boolean): void {
     passThrough = on;
-    if (on) barHidden = false;
+    if (on) {
+      barHidden = false;
+      picker = null;
+    }
     void getCurrentWindow()
       .setIgnoreCursorEvents(on)
       .catch(() => {
@@ -610,8 +614,8 @@
     }
   }
 
-  /** Two-key runs: `2` then 1–4 picks the shape, `g g` glass, `j j` click-through.
-   *  A lead that isn't followed in time is forgotten. */
+  /** Two-key runs: `2` then 1–4 picks the shape, `g g` glass, `j j` click-through,
+   *  `c c` / `c s` the pointer-side pickers. A lead not followed in time is forgotten. */
   const CHORD_MS = 900;
   const SHAPE_KEYS: Record<string, ShapeKind> = {
     '1': 'line',
@@ -635,6 +639,14 @@
     if (chordTimer) clearTimeout(chordTimer);
     chordTimer = null;
     return lead;
+  }
+
+  /** Last place the drawing pointer was seen, so a picker can meet it there. */
+  let pointerAt = { x: 0, y: 0 };
+  let picker = $state<{ mode: 'color' | 'width'; x: number; y: number } | null>(null);
+
+  function openPicker(mode: 'color' | 'width'): void {
+    picker = picker?.mode === mode ? null : { mode, x: pointerAt.x, y: pointerAt.y };
   }
 
   function doUndo(): void {
@@ -706,6 +718,10 @@
       if (glass) setPassThrough(true);
       return;
     }
+    if (lead === 'c' && (key === 'c' || key === 's')) {
+      openPicker(key === 'c' ? 'color' : 'width');
+      return;
+    }
 
     switch (key) {
       case ' ':
@@ -731,6 +747,7 @@
         break;
       case 'g':
       case 'j':
+      case 'c':
         startChord(key);
         break;
       case 'Escape':
@@ -753,6 +770,7 @@
   }
 
   function onPointerMove(e: PointerEvent): void {
+    pointerAt = { x: e.clientX, y: e.clientY };
     if (barHidden && e.clientY < 60) barHidden = false;
   }
 
@@ -765,6 +783,7 @@
 
   onMount(() => {
     dpr = window.devicePixelRatio || 1;
+    pointerAt = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     session.captureView = currentView;
     let cancelled = false;
     void (async () => {
@@ -925,6 +944,15 @@
   <ShortcutsSheet title="Notebook shortcuts" groups={CANVAS_SHORTCUTS} launcher={false} />
 
   <ToolIsland {tools} dimmed={passThrough} />
+
+  {#if picker}
+    <PointerPicker
+      mode={picker.mode}
+      at={{ x: picker.x, y: picker.y }}
+      {tools}
+      onclose={() => (picker = null)}
+    />
+  {/if}
 
   <PageOverview
     bind:open={overviewOpen}

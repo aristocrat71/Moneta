@@ -14,12 +14,47 @@
 
   let hexDraft = $state('');
 
+  const HOLD_MS = 500;
+  let holdTimer: ReturnType<typeof setTimeout> | null = null;
+  let holding = $state<string | null>(null);
+
   function pickCustom(color: string) {
     const recents = settings.data.recentColors.filter((c) => c !== color);
     recents.unshift(color);
     settings.data.recentColors = recents.slice(0, 6);
     settings.save();
     onpick(color);
+  }
+
+  function forget(color: string) {
+    settings.data.recentColors = settings.data.recentColors.filter((c) => c !== color);
+    settings.save();
+  }
+
+  // The pending timer doubles as the "still a tap" flag.
+  function holdStart(color: string) {
+    holding = color;
+    holdTimer = setTimeout(() => {
+      holdTimer = null;
+      holding = null;
+      forget(color);
+    }, HOLD_MS);
+  }
+
+  function holdEnd(color: string) {
+    holding = null;
+    if (!holdTimer) return;
+    clearTimeout(holdTimer);
+    holdTimer = null;
+    pickCustom(color);
+  }
+
+  function holdCancel() {
+    holding = null;
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = null;
+    }
   }
 
   function commitHex() {
@@ -49,15 +84,19 @@
 </div>
 
 {#if settings.data.recentColors.length > 0}
-  <div class="recent-row">
+  <div class="recent-row" style:--hold={`${HOLD_MS}ms`}>
     {#each settings.data.recentColors as color (color)}
       <button
         class="swatch small"
         class:selected={selected === color}
+        class:holding={holding === color}
         style:background={color}
         aria-label={color}
-        title={color}
-        onclick={() => onpick(color)}
+        title={`${color}  ·  hold to remove`}
+        onpointerdown={() => holdStart(color)}
+        onpointerup={() => holdEnd(color)}
+        onpointerleave={holdCancel}
+        onpointercancel={holdCancel}
       ></button>
     {/each}
   </div>
@@ -75,10 +114,13 @@
     }}
     onblur={commitHex}
   />
+  <!-- Seeded with the current ink: an unseeded wheel sits on #000000, and
+       `change` never fires for the value it already holds. -->
   <input
     class="wheel"
     type="color"
     aria-label="Pick a custom color"
+    value={resolveInk(selected, theme.dark)}
     onchange={(e) => pickCustom(e.currentTarget.value)}
   />
 </div>
@@ -98,6 +140,15 @@
   .swatch.small {
     width: 18px;
     height: 18px;
+    transition:
+      transform 120ms ease-out,
+      opacity 120ms ease-out;
+  }
+  /* The hold reads as a countdown: it shrinks away, then goes. */
+  .swatch.small.holding {
+    transform: scale(0.55);
+    opacity: 0.35;
+    transition-duration: var(--hold);
   }
   .swatch.selected {
     outline: 2px solid var(--accent);

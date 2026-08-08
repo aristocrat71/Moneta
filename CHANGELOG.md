@@ -12,6 +12,43 @@ copy of Moneta sees when it checks for updates. A tag with no matching section
 here fails the release before anything is built. Write the entry as you merge,
 not at tag time.
 
+## [1.1.0] - 2026-08-09
+
+The ink and its size now come to the pen. Two new key runs open the colour
+palette and the size control right where you're writing, so changing colour
+mid-sentence no longer means a trip down to the island and back.
+
+### Added
+
+- **`c c` opens the colours beside the pointer, `c s` the size.** Wherever your
+  pen is on the page, the picker appears next to it rather than in the corner of
+  the window, so your eye never leaves the line you're writing. Both open on
+  whichever tool is in hand: `c s` sizes the eraser while you're erasing and the
+  pen while you're not. Escape, a press outside, or the same run again puts it
+  away — and that dismissing press is swallowed rather than passed to the page,
+  so closing a picker can't leave a dot behind.
+- **Hold a recent colour to forget it.** Half a second on any swatch in the
+  recents row drops it; it shrinks while you hold, so letting go early keeps it.
+  Until now a colour mixed by mistake sat there until six more pushed it out.
+
+### Changed
+
+- **Picking a colour closes the picker** — the island's pop-over as well as the
+  new floating one. Choosing the colour was always the end of the errand.
+- **Using a recent colour keeps it recent.** A swatch you click moves back to
+  the front of the six. Before, only freshly mixed colours counted as recent, so
+  a colour you reached for constantly could still be pushed off the end by six
+  you used once each.
+
+### Fixed
+
+- **Pure black couldn't be picked from the colour wheel.** The wheel opened on
+  black every time, and it only reports a colour that differs from the one it is
+  already showing — so black, alone among every colour, did nothing at all. It
+  now opens on the ink you're using. Worth knowing when you reach for it: pure
+  black on a dark page is nearly invisible, which is why the palette's own Black
+  is a shade that reads on both papers.
+
 ## [1.0.0] - 2026-08-05
 
 Moneta is finished, in the sense that matters: everything it set out to do, it

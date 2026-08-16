@@ -5,7 +5,7 @@
 **[moneta website →](https://aristocrat71.github.io/Moneta/)**
 
 A personal, minimalist macOS handwriting app for external drawing tablets.
-Tauri 2 · Svelte 5 (runes) · TypeScript · Canvas 2D · perfect-freehand. Fully offline —
+Tauri 2 · Svelte 5 (runes) · TypeScript · Canvas 2D · perfect-freehand. Fully offline:
 everything lives in `~/Moneta` as plain JSON.
 
 Canonical docs: [`docs/DESIGN.md`](docs/DESIGN.md) (visual spec) ·
@@ -34,7 +34,7 @@ bun tauri dev      # run the app
 bun test           # vitest suite (geometry, migrations, undo, serialization)
 bun run check      # svelte-check + eslint + prettier
 
-# Release build. Bundling signs the updater artifact, so it needs the key —
+# Release build. Bundling signs the updater artifact, so it needs the key;
 # without it the .app and .dmg are still written but the command exits non-zero.
 TAURI_SIGNING_PRIVATE_KEY=~/.tauri/moneta-updater.key bun tauri build
 ```
@@ -44,7 +44,7 @@ Rust side: `cargo fmt`, `cargo clippy -- -D warnings`, and `cargo test` in `src-
 ## Layout
 
 ```
-src/lib/ink/    the ink engine — framework-free TS, public surface engine.ts only
+src/lib/ink/    the ink engine, framework-free TS, public surface engine.ts only
 src/lib/doc/    document model, undoable commands, migrations, serialization
 src/lib/store/  Svelte runes stores: settings, theme, library, open notebook
 src/lib/ui/     island, cards, sheets, popovers

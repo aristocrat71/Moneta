@@ -1,7 +1,15 @@
 <script lang="ts">
   // The Library: a dense tree or the thumbnail grid, toggled from the header.
   import { goto } from '$app/navigation';
-  import { FolderPlus, LayoutGrid, ListTree, Plus, Settings, SquarePen } from '@lucide/svelte';
+  import {
+    ArrowDownWideNarrow,
+    FolderPlus,
+    LayoutGrid,
+    ListTree,
+    Plus,
+    Settings,
+    SquarePen,
+  } from '@lucide/svelte';
   import type { NotebookMeta, ProjectData } from '$lib/ipc';
   import { library } from '$lib/store/library.svelte';
   import { settings } from '$lib/store/settings.svelte';
@@ -19,8 +27,16 @@
   import ShortcutsSheet from '$lib/ui/ShortcutsSheet.svelte';
   import { LIBRARY_SHORTCUTS } from '$lib/ui/shortcuts';
   import type { MenuItem } from '$lib/ui/menu';
+  import {
+    DIR_LABELS,
+    SORT_LABELS,
+    naturalDir,
+    type LibrarySort,
+    type SortDir,
+  } from '$lib/util/sort';
 
   let newMenuOpen = $state(false);
+  let sortMenuOpen = $state(false);
   let searchOpen = $state(false);
   let treeEl = $state<HTMLElement | null>(null);
   let cursorKey = $state<string | null>(null);
@@ -179,6 +195,35 @@
     { label: 'New project', icon: FolderPlus, action: () => void createProject() },
   ];
 
+  /** A new key starts in the sense that reads right for it; the flip is one more tap. */
+  function setSort(sort: LibrarySort) {
+    preview.close();
+    settings.data.librarySort = sort;
+    settings.data.librarySortDir = naturalDir(sort);
+    settings.save();
+  }
+
+  function setSortDir(dir: SortDir) {
+    preview.close();
+    settings.data.librarySortDir = dir;
+    settings.save();
+  }
+
+  // Recent is left out on purpose: it is the one list whose order is its name.
+  const sortMenuItems = $derived([
+    ...(Object.keys(SORT_LABELS) as LibrarySort[]).map((sort): MenuItem => ({
+      label: SORT_LABELS[sort],
+      checked: settings.data.librarySort === sort,
+      action: () => setSort(sort),
+    })),
+    ...(Object.keys(DIR_LABELS) as SortDir[]).map((dir, i): MenuItem => ({
+      label: DIR_LABELS[dir],
+      checked: settings.data.librarySortDir === dir,
+      divider: i === 0,
+      action: () => setSortDir(dir),
+    })),
+  ]);
+
   function focusRow(key: string | undefined) {
     if (!key) return;
     cursorKey = key;
@@ -266,6 +311,19 @@
           <ListTree size={16} strokeWidth={1.5} />
         {/if}
       </button>
+      <div class="menu-anchor">
+        <button
+          class="icon-btn"
+          class:open={sortMenuOpen}
+          title="Sort notebooks"
+          aria-label="Sort notebooks"
+          onclick={() => (sortMenuOpen = !sortMenuOpen)}
+          onpointerdown={(e) => e.stopPropagation()}
+        >
+          <ArrowDownWideNarrow size={16} strokeWidth={1.5} />
+        </button>
+        <Menu bind:open={sortMenuOpen} items={sortMenuItems} align="right" />
+      </div>
       <button
         class="icon-btn"
         title="Settings  ⌘,"

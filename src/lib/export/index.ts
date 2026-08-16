@@ -4,7 +4,8 @@ import { ipc } from '$lib/ipc';
 import { DEFAULT_TUNING, renderPageBitmap } from '$lib/ink/engine';
 import { getThemePaint } from '$lib/ui/theme-paint';
 import type { NotebookDoc } from '$lib/doc/model';
-import { buildPdf } from './pdf';
+import { byTitle } from '$lib/util/sort';
+import { buildPdf, buildProjectPdf } from './pdf';
 import { buildPageSvg } from './svg';
 import { resolveRange, rangeSuffix, type PageRange } from './range';
 
@@ -76,4 +77,19 @@ export async function exportNotebook(
     }
   }
   return lastPath.slice(0, lastPath.lastIndexOf('/'));
+}
+
+/** A whole project as one PDF: cover, linked contents, then every notebook in
+ *  alphabetical order behind a title page of its own. Returns the written path. */
+export async function exportProject(
+  name: string,
+  docs: NotebookDoc[],
+  paper: ExportPaper = 'light',
+): Promise<string> {
+  const paint = getThemePaint(paper === 'dark');
+  const sections = [...docs]
+    .sort(byTitle)
+    .map((doc) => ({ title: doc.title, pages: doc.pages }));
+  const pdf = buildProjectPdf(name, sections, paint);
+  return ipc.exportFile(`${safeName(name)}.pdf`, b64FromBytes(pdf));
 }

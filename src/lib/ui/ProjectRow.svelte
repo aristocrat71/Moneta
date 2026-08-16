@@ -1,9 +1,20 @@
 <script lang="ts">
   // A branch of the library tree: Recent, a project, or Unfiled.
   import { goto } from '$app/navigation';
-  import { ChevronRight, MoreHorizontal, Pencil, SquarePen, Trash2 } from '@lucide/svelte';
-  import type { ProjectData } from '$lib/ipc';
+  import {
+    ChevronRight,
+    Download,
+    MoreHorizontal,
+    Pencil,
+    SquarePen,
+    Trash2,
+  } from '@lucide/svelte';
+  import { ipc, type ProjectData } from '$lib/ipc';
+  import { parseNotebook } from '$lib/doc/serialize';
+  import { exportProject, type ExportPaper } from '$lib/export';
   import { library } from '$lib/store/library.svelte';
+  import { settings } from '$lib/store/settings.svelte';
+  import { toasts } from '$lib/store/toast.svelte';
   import { ui } from '$lib/store/ui.svelte';
   import Menu from './Menu.svelte';
   import ConfirmSheet from './ConfirmSheet.svelte';
@@ -35,6 +46,7 @@
   let renaming = $state(false);
   let draft = $state('');
   let confirmDelete = $state(false);
+  let exporting = $state(false);
   let dragOver = $state(false);
   let renameInput = $state<HTMLInputElement | null>(null);
 
@@ -56,6 +68,25 @@
     if (id) void goto(`/notebook/${id}`);
   }
 
+  async function runExport(paper: ExportPaper) {
+    if (!project || exporting) return;
+    exporting = true;
+    try {
+      const docs = [];
+      for (const meta of library.notebooksIn(project.id)) {
+        docs.push(parseNotebook(await ipc.readNotebook(meta.id)));
+      }
+      const path = await exportProject(project.name, docs, paper);
+      settings.data.exportPaper = paper;
+      settings.save();
+      toasts.show(`Exported to ${path}`);
+    } catch (e) {
+      toasts.show(`Couldn't export “${label}” · ${e}`);
+    } finally {
+      exporting = false;
+    }
+  }
+
   const menuItems = $derived.by((): MenuItem[] => [
     { label: 'New notebook', icon: SquarePen, action: () => void newNotebook() },
     {
@@ -65,6 +96,15 @@
         draft = label;
         renaming = true;
       },
+    },
+    {
+      label: 'Export PDF',
+      icon: Download,
+      disabled: count === 0,
+      children: [
+        { label: 'Light paper', action: () => void runExport('light') },
+        { label: 'Dark paper', action: () => void runExport('dark') },
+      ],
     },
     {
       label: 'Delete project',

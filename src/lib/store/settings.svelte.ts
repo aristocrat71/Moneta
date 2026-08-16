@@ -1,5 +1,6 @@
 import { ipc } from '$lib/ipc';
 import type { ShapeKind, TemplateKind, ToolKind } from '$lib/ink/engine';
+import type { LibrarySort, SortDir } from '$lib/util/sort';
 
 export interface IslandPos {
   x: number;
@@ -21,6 +22,11 @@ export interface SettingsData {
   recentColors: string[];
   /** Library shape: dense tree, or the thumbnail grid. */
   libraryLayout: 'tree' | 'cards';
+  /** Order notebooks are listed in, inside every project and Unfiled. */
+  librarySort: LibrarySort;
+  librarySortDir: SortDir;
+  /** Paper the last export was rendered on; every export path starts there. */
+  exportPaper: 'light' | 'dark';
   /** How solid the paper is in glass mode, 0–1. Glass itself never persists. */
   glassOpacity: number;
   recentCollapsed: boolean;
@@ -41,6 +47,9 @@ const DEFAULTS: SettingsData = {
   pressureGamma: 1,
   recentColors: [],
   libraryLayout: 'tree',
+  librarySort: 'edited',
+  librarySortDir: 'desc',
+  exportPaper: 'light',
   glassOpacity: 0,
   recentCollapsed: false,
   unfiledCollapsed: false,

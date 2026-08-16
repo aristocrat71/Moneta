@@ -4,6 +4,8 @@ import { parseNotebook } from '$lib/doc/serialize';
 import { serializeNotebook } from '$lib/doc/serialize';
 import type { NotebookDoc } from '$lib/doc/model';
 import type { TemplateKind } from '$lib/ink/engine';
+import { sortNotebooks } from '$lib/util/sort';
+import { settings } from './settings.svelte';
 import { toasts } from './toast.svelte';
 
 class LibraryStore {
@@ -73,17 +75,21 @@ class LibraryStore {
   }
 
   notebooksIn(projectId: string): NotebookMeta[] {
-    return this.notebooks
-      .filter((n) => n.projectId === projectId)
-      .sort((a, b) => b.modifiedAt - a.modifiedAt);
+    return sortNotebooks(
+      this.notebooks.filter((n) => n.projectId === projectId),
+      settings.data.librarySort,
+      settings.data.librarySortDir,
+    );
   }
 
   /** Unfiled = no project, or a project that no longer exists. */
   get unfiled(): NotebookMeta[] {
     const ids = this.projectIds();
-    return this.notebooks
-      .filter((n) => n.projectId === null || !ids.has(n.projectId))
-      .sort((a, b) => b.modifiedAt - a.modifiedAt);
+    return sortNotebooks(
+      this.notebooks.filter((n) => n.projectId === null || !ids.has(n.projectId)),
+      settings.data.librarySort,
+      settings.data.librarySortDir,
+    );
   }
 
   private async saveProjects(): Promise<void> {

@@ -3,6 +3,7 @@
   import { INKS, resolveInk } from '$lib/ink/engine';
   import { theme } from '$lib/store/theme.svelte';
   import { settings } from '$lib/store/settings.svelte';
+  import { forgetColor, rememberColor } from '$lib/ui/recent-colors';
 
   let {
     selected,
@@ -19,16 +20,8 @@
   let holding = $state<string | null>(null);
 
   function pickCustom(color: string) {
-    const recents = settings.data.recentColors.filter((c) => c !== color);
-    recents.unshift(color);
-    settings.data.recentColors = recents.slice(0, 6);
-    settings.save();
+    rememberColor(color);
     onpick(color);
-  }
-
-  function forget(color: string) {
-    settings.data.recentColors = settings.data.recentColors.filter((c) => c !== color);
-    settings.save();
   }
 
   // The pending timer doubles as the "still a tap" flag.
@@ -37,7 +30,7 @@
     holdTimer = setTimeout(() => {
       holdTimer = null;
       holding = null;
-      forget(color);
+      forgetColor(color);
     }, HOLD_MS);
   }
 

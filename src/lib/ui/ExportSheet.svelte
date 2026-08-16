@@ -1,11 +1,12 @@
 <script lang="ts">
-  // PDF export with the pages on screen while you choose them. The preview is the
-  // export renderer itself, on light paper — the page you are about to get.
+  // PDF export with the pages on screen while you choose them: the preview is the
+  // export renderer itself, on the paper you picked.
   import { ChevronLeft, ChevronRight } from '@lucide/svelte';
   import { ipc, type NotebookMeta } from '$lib/ipc';
+  import { settings } from '$lib/store/settings.svelte';
   import { toasts } from '$lib/store/toast.svelte';
   import { parseNotebook } from '$lib/doc/serialize';
-  import { exportNotebook, resolveRange } from '$lib/export';
+  import { exportNotebook, resolveRange, type ExportPaper } from '$lib/export';
   import { getThemePaint } from '$lib/ui/theme-paint';
   import { DEFAULT_TUNING, renderPageBitmap } from '$lib/ink/engine';
   import type { NotebookDoc } from '$lib/doc/model';
@@ -20,6 +21,7 @@
   let src = $state<string | null>(null);
   let busy = $state(false);
   let exportBtn = $state<HTMLButtonElement | null>(null);
+  let paper = $state<ExportPaper>('light');
 
   const total = $derived(doc?.pages.length ?? nb.pageCount);
   const span = $derived(resolveRange(total, { from: from ?? 1, to: to ?? total }));
@@ -40,6 +42,8 @@
       src = null;
       return;
     }
+    // Opens on the paper the last export used, whichever theme the library is in.
+    paper = settings.data.exportPaper;
     let alive = true;
     void (async () => {
       try {
@@ -71,11 +75,17 @@
       strokes: p.strokes,
       template: p.template,
       size: p.size,
-      paint: getThemePaint(false),
+      paint: getThemePaint(paper === 'dark'),
       tuning: DEFAULT_TUNING,
       width: 620,
     }).toDataURL();
   });
+
+  function setPaper(next: ExportPaper) {
+    paper = next;
+    settings.data.exportPaper = next;
+    settings.save();
+  }
 
   function onkeydown(e: KeyboardEvent) {
     if (!open) return;
@@ -95,7 +105,7 @@
     if (!doc || busy) return;
     busy = true;
     try {
-      const path = await exportNotebook(doc, 'pdf', span);
+      const path = await exportNotebook(doc, 'pdf', { range: span, paper });
       open = false;
       toasts.show(`Exported to ${path}`);
     } catch (e) {
@@ -124,7 +134,8 @@
 
       <div class="body">
         <div class="preview">
-          <div class="sheet-shadow">
+          <!-- The frame wears the paper it is previewing. -->
+          <div class="sheet-shadow" data-theme={paper}>
             {#if src}
               <img {src} alt={`Page ${shown}`} draggable="false" />
             {/if}
@@ -178,6 +189,22 @@
             />
           </div>
           <p class="count">{summary}</p>
+
+          <span class="label paper-label">Paper</span>
+          <div class="paper" role="group" aria-label="Paper">
+            <button
+              class="chip"
+              class:active={paper === 'light'}
+              aria-pressed={paper === 'light'}
+              onclick={() => setPaper('light')}>Light</button
+            >
+            <button
+              class="chip"
+              class:active={paper === 'dark'}
+              aria-pressed={paper === 'dark'}
+              onclick={() => setPaper('dark')}>Dark</button
+            >
+          </div>
         </div>
       </div>
 
@@ -255,7 +282,7 @@
     gap: 8px;
     flex: none;
   }
-  /* Light paper whichever theme the library is in — the PDF will be light. */
+  /* [data-theme] on the frame, so it shows the export's paper, not the library's. */
   .sheet-shadow {
     width: 240px;
     height: 340px;
@@ -342,6 +369,28 @@
   .count {
     font-size: 12px;
     color: var(--text-muted);
+  }
+  .paper-label {
+    margin-top: 6px;
+  }
+  .paper {
+    display: flex;
+    gap: 6px;
+  }
+  .chip {
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .chip:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .chip.active {
+    color: var(--text);
+    border-color: var(--accent);
   }
   footer {
     display: flex;

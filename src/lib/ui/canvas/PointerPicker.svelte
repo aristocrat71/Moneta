@@ -1,10 +1,11 @@
 <script lang="ts">
-  // Opens beside the drawing pointer: `c c` and `c s`.
+  // Opens at the drawing pointer: `c c` rings the nib with ink, `c s` sits beside it.
   import { resolveInk } from '$lib/ink/engine';
   import { theme } from '$lib/store/theme.svelte';
-  import SwatchGrid from '$lib/ui/SwatchGrid.svelte';
+  import ColorRing from './ColorRing.svelte';
   import WidthPicker from './WidthPicker.svelte';
-  import { colorOf, drawToolOf, setColorOn, type ToolState } from './tool-state';
+  import { dismissOutside } from './dismiss';
+  import { colorOf, drawToolOf, type ToolState } from './tool-state';
 
   let {
     mode,
@@ -47,57 +48,28 @@
     top = Math.min(Math.max(EDGE, y), Math.max(EDGE, window.innerHeight - h - EDGE));
     placed = true;
   });
-
-  // A press outside dismisses without leaving a stray dot.
-  $effect(() => {
-    const onDown = (e: PointerEvent) => {
-      if (panel?.contains(e.target as Node)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      // preventDefault suppresses the blur a typed hex commits on.
-      const focused = document.activeElement;
-      if (focused instanceof HTMLElement && panel?.contains(focused)) focused.blur();
-      onclose();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onclose();
-      }
-    };
-    window.addEventListener('pointerdown', onDown, true);
-    window.addEventListener('keydown', onKey, true);
-    return () => {
-      window.removeEventListener('pointerdown', onDown, true);
-      window.removeEventListener('keydown', onKey, true);
-    };
-  });
-
-  function pickColor(color: string) {
-    setColorOn(tools, color);
-    onclose();
-  }
 </script>
 
-<div
-  class="picker"
-  class:placed
-  bind:this={panel}
-  style:left={`${left}px`}
-  style:top={`${top}px`}
-  role="dialog"
-  aria-label={mode === 'color' ? 'Ink color' : isEraser ? 'Eraser size' : 'Stroke width'}
->
-  <div class="caption">
-    <span class="dot" style:background={isEraser ? 'transparent' : resolvedColor}></span>
-    {caption}
-  </div>
-  {#if mode === 'color'}
-    <SwatchGrid selected={colorOf(tools)} onpick={pickColor} />
-  {:else}
+{#if mode === 'color'}
+  <ColorRing {at} {tools} {onclose} />
+{:else}
+  <div
+    class="picker"
+    class:placed
+    bind:this={panel}
+    use:dismissOutside={onclose}
+    style:left={`${left}px`}
+    style:top={`${top}px`}
+    role="dialog"
+    aria-label={isEraser ? 'Eraser size' : 'Stroke width'}
+  >
+    <div class="caption">
+      <span class="dot" style:background={isEraser ? 'transparent' : resolvedColor}></span>
+      {caption}
+    </div>
     <WidthPicker {tools} />
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
   .picker {

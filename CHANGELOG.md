@@ -12,6 +12,50 @@ copy of Moneta sees when it checks for updates. A tag with no matching section
 here fails the release before anything is built. Write the entry as you merge,
 not at tag time.
 
+## [1.2.0] - 2026-08-16
+
+Exports grew up. A notebook can now go out on dark paper instead of always
+being flattened onto white, and a whole project can go out as one bound PDF
+with a contents page that actually clicks through. The library learned to sort
+itself, and the colour picker moved from beside the nib to around it.
+
+### Added
+
+- **Export on the paper you want, not the one the app happens to be in.**
+  `⋯` → Export → PNG or SVG now asks Light paper or Dark paper first, and the
+  PDF sheet carries a Paper toggle whose preview and frame follow it. Dark is
+  not a filter over a light render: it is what the dark app shows, so "black"
+  ink comes out bone-white on a dark canvas and the highlighter lightens what
+  it crosses instead of darkening it. The choice is remembered across every
+  export path, so working in dark all week costs one tap rather than one per
+  file. Filenames are unchanged, which means re-exporting on the other paper
+  replaces the file rather than leaving you with one of each.
+- **A whole project as one PDF.** A project's `⋯` menu gains Export PDF. You
+  get a cover carrying the project name, a contents sheet whose every line
+  links through to the notebook it names, and each notebook opening on a title
+  page of its own. Notebooks are laid out alphabetically whatever the library
+  is sorted by, because the order of a bound volume belongs to the volume, not
+  to the view you compiled it from.
+- **Sort the library.** A control beside the layout toggle opens three keys,
+  Last edited, Created, and Title, over Ascending and Descending, with the
+  current pair ticked. Picking a key starts it in the sense that reads right
+  for it: newest first for a date, A to Z for a title, so a fresh choice never
+  arrives backwards. It is one choice for the whole library rather than one per
+  project, it holds in both the tree and the grid, and it persists. Recent is
+  left out, being the one group whose order is its name.
+
+### Changed
+
+- **`c c` now rings the pen with its palette instead of opening a panel beside
+  it.** The twelve inks sit on a ring around the nib, recents and a custom chip
+  on a smaller ring inside it, and the tool you are holding sits in the middle
+  wearing its current colour. Every swatch is the same flick away every time,
+  and near a window edge the ring slides inward rather than hanging off it. A
+  swatch picks and closes, the clear middle where the pen already is dismisses,
+  and a press on the ring itself is ignored, because a tap that misses a swatch
+  should not cost you the whole gesture. Typing a hex code stays in the
+  island's pop-over, where a keyboard is already in reach. `c s` is unchanged.
+
 ## [1.1.0] - 2026-08-09
 
 The ink and its size now come to the pen. Two new key runs open the colour

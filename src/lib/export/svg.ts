@@ -1,7 +1,8 @@
-// Vector SVG export — one file per page, always light-paper rendering.
+// Vector SVG export — one file per page, on the paper the caller asks for.
 
 import {
   DEFAULT_TUNING,
+  HIGHLIGHT_ALPHA_DARK,
   HIGHLIGHT_ALPHA_LIGHT,
   outlineToSvgPath,
   resolveInk,
@@ -60,8 +61,8 @@ export function buildPageSvg(page: DocPage, paint: ThemePaint, title: string): s
       });
       const d = outlineToSvgPath(outline);
       const fill = resolveInk(s.color, paint.dark);
-      const opacity =
-        s.tool === 'highlighter' ? ` fill-opacity="${HIGHLIGHT_ALPHA_LIGHT}"` : '';
+      const alpha = paint.dark ? HIGHLIGHT_ALPHA_DARK : HIGHLIGHT_ALPHA_LIGHT;
+      const opacity = s.tool === 'highlighter' ? ` fill-opacity="${alpha}"` : '';
       return `<path d="${d}" fill="${fill}"${opacity}/>`;
     })
     .join('\n  ');

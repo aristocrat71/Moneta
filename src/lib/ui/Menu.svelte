@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronLeft, ChevronRight } from '@lucide/svelte';
+  import { Check, ChevronLeft, ChevronRight } from '@lucide/svelte';
   import type { MenuItem } from './menu';
 
   let {
@@ -100,6 +100,9 @@
       <div class="rule"></div>
     {/if}
     {#each current as item, i (i)}
+      {#if item.divider && i > 0}
+        <div class="rule"></div>
+      {/if}
       <button
         class="item"
         class:danger={item.danger}
@@ -109,6 +112,11 @@
       >
         {#if item.icon}
           <item.icon size={16} strokeWidth={1.5} />
+        {/if}
+        {#if item.checked !== undefined}
+          <span class="tick" class:on={item.checked}>
+            <Check size={14} strokeWidth={2} />
+          </span>
         {/if}
         <span>{item.label}</span>
         {#if item.children}
@@ -157,6 +165,18 @@
   }
   .item span {
     flex: 1;
+  }
+  /* Held even when unticked, so the labels of a choice line up. */
+  .item .tick {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 14px;
+    color: var(--accent);
+    visibility: hidden;
+  }
+  .tick.on {
+    visibility: visible;
   }
   .item:hover:not(:disabled) {
     background: var(--surface-2);

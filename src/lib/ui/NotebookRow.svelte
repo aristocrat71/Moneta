@@ -8,7 +8,8 @@
   import { theme } from '$lib/store/theme.svelte';
   import { toasts } from '$lib/store/toast.svelte';
   import { parseNotebook } from '$lib/doc/serialize';
-  import { exportNotebook, type ExportKind } from '$lib/export';
+  import { exportNotebook, type ExportKind, type ExportPaper } from '$lib/export';
+  import { settings } from '$lib/store/settings.svelte';
   import { pagesLabel, relTime } from '$lib/util/format';
   import Menu from './Menu.svelte';
   import ConfirmSheet from './ConfirmSheet.svelte';
@@ -47,14 +48,23 @@
     if (renaming) renameInput?.select();
   });
 
-  async function runExport(kind: ExportKind) {
+  async function runExport(kind: ExportKind, paper: ExportPaper) {
     try {
       const doc = parseNotebook(await ipc.readNotebook(nb.id));
-      const path = await exportNotebook(doc, kind);
+      const path = await exportNotebook(doc, kind, { paper });
+      settings.data.exportPaper = paper;
+      settings.save();
       toasts.show(`Exported to ${path}`);
     } catch (e) {
       toasts.show(`Couldn't export · ${e}`);
     }
+  }
+
+  function paperChoices(kind: ExportKind): MenuItem[] {
+    return [
+      { label: 'Light paper', action: () => void runExport(kind, 'light') },
+      { label: 'Dark paper', action: () => void runExport(kind, 'dark') },
+    ];
   }
 
   const menuItems = $derived.by((): MenuItem[] => [
@@ -88,8 +98,8 @@
       icon: Download,
       children: [
         { label: 'PDF…', action: () => (exportPdf = true) },
-        { label: 'PNG', action: () => void runExport('png') },
-        { label: 'SVG', action: () => void runExport('svg') },
+        { label: 'PNG', children: paperChoices('png') },
+        { label: 'SVG', children: paperChoices('svg') },
       ],
     },
     { label: 'Delete', icon: Trash2, danger: true, action: () => (confirmDelete = true) },

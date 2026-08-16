@@ -21,6 +21,8 @@ export interface SettingsData {
   recentColors: string[];
   /** Library shape: dense tree, or the thumbnail grid. */
   libraryLayout: 'tree' | 'cards';
+  /** Paper the last export was rendered on; every export path starts there. */
+  exportPaper: 'light' | 'dark';
   /** How solid the paper is in glass mode, 0–1. Glass itself never persists. */
   glassOpacity: number;
   recentCollapsed: boolean;
@@ -41,6 +43,7 @@ const DEFAULTS: SettingsData = {
   pressureGamma: 1,
   recentColors: [],
   libraryLayout: 'tree',
+  exportPaper: 'light',
   glassOpacity: 0,
   recentCollapsed: false,
   unfiledCollapsed: false,

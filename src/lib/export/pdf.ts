@@ -3,6 +3,7 @@
 
 import {
   DEFAULT_TUNING,
+  HIGHLIGHT_ALPHA_DARK,
   HIGHLIGHT_ALPHA_LIGHT,
   resolveInk,
   strokeOutline,
@@ -95,9 +96,13 @@ export function buildPdf(pages: DocPage[], paint: ThemePaint): Uint8Array {
   const bodies: string[] = [];
   const add = (body: string): number => bodies.push(body); // returns new length = obj number
 
+  // As on screen: multiply on light paper, screen on dark — multiply would vanish there.
+  const hlAlpha = paint.dark ? HIGHLIGHT_ALPHA_DARK : HIGHLIGHT_ALPHA_LIGHT;
+  const hlBlend = paint.dark ? '/Screen' : '/Multiply';
+
   add('<< /Type /Catalog /Pages 2 0 R >>');
   add(''); // placeholder for the Pages node (object 2)
-  add(`<< /Type /ExtGState /ca ${HIGHLIGHT_ALPHA_LIGHT} /CA 1 /BM /Multiply >>`);
+  add(`<< /Type /ExtGState /ca ${hlAlpha} /CA 1 /BM ${hlBlend} >>`);
   add('<< /Type /ExtGState /ca 1 /CA 1 /BM /Normal >>');
 
   const kids: string[] = [];

@@ -1,4 +1,4 @@
-// Export orchestration. Files land in ~/Moneta/exports, always on light paper.
+// Export orchestration. Files land in ~/Moneta/exports, on light paper unless asked.
 
 import { ipc } from '$lib/ipc';
 import { DEFAULT_TUNING, renderPageBitmap } from '$lib/ink/engine';
@@ -9,6 +9,15 @@ import { buildPageSvg } from './svg';
 import { resolveRange, rangeSuffix, type PageRange } from './range';
 
 export type ExportKind = 'pdf' | 'png' | 'svg';
+
+/** The paper an export renders on — the same two the app itself has. */
+export type ExportPaper = 'light' | 'dark';
+
+export interface ExportOptions {
+  /** Inclusive and 1-based; omitted means the whole notebook. */
+  range?: PageRange | null;
+  paper?: ExportPaper;
+}
 
 export { resolveRange, rangeSuffix, type PageRange };
 
@@ -30,15 +39,15 @@ function safeName(title: string): string {
   return cleaned.length > 0 ? cleaned : 'Untitled';
 }
 
-/** Returns the written path (pdf) or the export folder (png/svg). `range` is
- *  inclusive and 1-based; pages keep their own numbers in png/svg filenames. */
+/** Returns the written path (pdf) or the export folder (png/svg). */
 export async function exportNotebook(
   doc: NotebookDoc,
   kind: ExportKind,
-  range?: PageRange | null,
+  opts: ExportOptions = {},
 ): Promise<string> {
-  const paint = getThemePaint(false);
-  const span = resolveRange(doc.pages.length, range);
+  const dark = opts.paper === 'dark';
+  const paint = getThemePaint(dark);
+  const span = resolveRange(doc.pages.length, opts.range);
   const pages = doc.pages.slice(span.from - 1, span.to);
   const name = safeName(doc.title) + rangeSuffix(span, doc.pages.length);
 

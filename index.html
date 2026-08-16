@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Moneta — keep what your hand writes</title>
+<title>Moneta: keep what your hand writes</title>
 <meta name="description" content="Moneta is a minimal handwriting notebook for macOS and drawing tablets. Your ink, one floating island of tools, and nothing else.">
 <meta name="color-scheme" content="light dark">
 <meta property="og:title" content="Moneta">
@@ -313,32 +313,32 @@
         <div class="feature">
           <span class="num">01</span>
           <h3>Ink first</h3>
-          <p>Pressure-sensitive pen tuned for drawing tablets. Nothing ever sits between pen-down and ink &mdash; no lag, no ceremony.</p>
+          <p>Pressure-sensitive pen tuned for drawing tablets. Nothing ever sits between pen-down and ink. No lag, no ceremony.</p>
         </div>
         <div class="feature">
           <span class="num">02</span>
           <h3>One island, no bars</h3>
-          <p>Every tool in a single floating pill, on keys <span class="kbd">1</span>&ndash;<span class="kbd">5</span>. No menus, no toolbars, no sidebars &mdash; chrome appears on demand and disappears.</p>
+          <p>Every tool in a single floating pill, on keys <span class="kbd">1</span>&ndash;<span class="kbd">5</span>. No menus, no toolbars, no sidebars. Press <span class="kbd">c&nbsp;c</span> and the palette rings the pen, so changing ink never means leaving the page.</p>
         </div>
         <div class="feature">
           <span class="num">03</span>
           <h3>A library of your ink</h3>
-          <p>Notebooks show live thumbnails of real pages, file into projects, and reopen exactly where you last edited. Fuzzy search on <span class="kbd">&#8984;K</span>.</p>
+          <p>Notebooks show live thumbnails of real pages, file into projects, and reopen exactly where you last edited. Order them by last edit, creation, or title; fuzzy search on <span class="kbd">&#8984;K</span>.</p>
         </div>
         <div class="feature">
           <span class="num">04</span>
           <h3>Glass</h3>
-          <p>Fade the paper away and write over whatever is behind the window &mdash; a paper, a video, a design. <span class="kbd">g&nbsp;g</span> toggles it; click-through included.</p>
+          <p>Fade the paper away and write over whatever is behind the window: a paper, a video, a design. <span class="kbd">g&nbsp;g</span> toggles it; click-through included.</p>
         </div>
         <div class="feature">
           <span class="num">05</span>
           <h3>Paper &amp; slate</h3>
-          <p>Light mode reads as paper, dark as slate, and your black ink turns bone-white on its own. This page does it too &mdash; try the toggle above.</p>
+          <p>Light mode reads as paper, dark as slate, and your black ink turns bone-white on its own. Exports go out on the paper you pick, not the one you happen to be in. This page does it too; try the toggle above.</p>
         </div>
         <div class="feature">
           <span class="num">06</span>
           <h3>Plain files, no cloud</h3>
-          <p>Notebooks are plain JSON in <code>~/Moneta</code>. Fully offline, no accounts, no telemetry. Export any page range to PDF, SVG, or PNG.</p>
+          <p>Notebooks are plain JSON in <code>~/Moneta</code>. Fully offline, no accounts, no telemetry. Export any page range to PDF, SVG, or PNG, or bind a whole project into one PDF with its contents page linked.</p>
         </div>
       </div>
     </section>
@@ -372,7 +372,7 @@
     var COPY_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
     var CHECK_ICON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
     // navigator.clipboard only exists in a secure context, so it's undefined
-    // over file:// — reading .writeText off it throws synchronously, which a
+    // over file://. Reading .writeText off it throws synchronously, which a
     // .catch() on the promise would never see. Fall back to execCommand so a
     // local preview copies too, and only claim success if something worked.
     function copyText(text) {
@@ -411,7 +411,7 @@
           }, 1600);
         }).catch(function () {
           // Nothing reached the clipboard, and the command is no longer on
-          // screen — reveal it so it can still be selected by hand.
+          // screen, so reveal it to be selected by hand.
           label.textContent = 'Copy it manually';
           if (fallback) {
             fallback.textContent = btn.dataset.cmd;

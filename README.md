@@ -48,7 +48,7 @@ src/lib/ink/    the ink engine — framework-free TS, public surface engine.ts o
 src/lib/doc/    document model, undoable commands, migrations, serialization
 src/lib/store/  Svelte runes stores: settings, theme, library, open notebook
 src/lib/ui/     island, cards, sheets, popovers
-src/lib/export/ vector PDF / SVG / PNG export (always light-paper)
+src/lib/export/ vector PDF / SVG / PNG export, light or dark paper, per notebook or project
 src-tauri/      Rust: atomic file I/O, library scan, FS watcher
 assets/         source artwork; scripts/make-icon.py regenerates src-tauri/icons/
 ```
